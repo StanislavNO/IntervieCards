@@ -200,9 +200,40 @@ export function Flashcard({
     setSwipeMomentum(null);
   };
 
+  useEffect(() => {
+    if (!isDragging) {
+      return;
+    }
+
+    const stopDragging = () => {
+      resetSwipe();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') {
+        stopDragging();
+      }
+    };
+
+    window.addEventListener('mouseup', stopDragging);
+    window.addEventListener('blur', stopDragging);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('mouseup', stopDragging);
+      window.removeEventListener('blur', stopDragging);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isDragging]);
+
   const finishSwipe = (event: ReactPointerEvent<HTMLElement>) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
     const pointer = pointerStateRef.current;
     if (!pointer || pointer.pointerId !== event.pointerId) {
+      resetSwipe();
       return;
     }
 
@@ -233,6 +264,12 @@ export function Flashcard({
 
   const handlePointerCancel = () => {
     resetSwipe();
+  };
+
+  const handleLostPointerCapture = () => {
+    if (pointerStateRef.current || isDragging) {
+      resetSwipe();
+    }
   };
 
   const handleMouseMove = (event: React.MouseEvent<HTMLElement>) => {
@@ -290,6 +327,7 @@ export function Flashcard({
       onPointerMove={handlePointerMove}
       onPointerUp={finishSwipe}
       onPointerCancel={handlePointerCancel}
+      onLostPointerCapture={handleLostPointerCapture}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
     >
