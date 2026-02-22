@@ -497,24 +497,28 @@ export function Flashcard({
                 </button>
               )}
 
-              {showActions && onEdit && onDelete && (
+              {showActions && (onEdit || onDelete) && (
                 <>
-                  <button
-                    type="button"
-                    aria-label="Редактировать карточку"
-                    onClick={() => onEdit(card)}
-                    className="action-icon-btn"
-                  >
-                    ✎
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Удалить карточку"
-                    onClick={() => onDelete(card)}
-                    className="action-icon-btn border-rose-300/80 text-rose-600 hover:border-rose-400 hover:text-rose-700 dark:border-rose-500/50 dark:text-rose-300"
-                  >
-                    🗑
-                  </button>
+                  {onEdit && (
+                    <button
+                      type="button"
+                      aria-label="Редактировать карточку"
+                      onClick={() => onEdit(card)}
+                      className="action-icon-btn"
+                    >
+                      ✎
+                    </button>
+                  )}
+                  {onDelete && (
+                    <button
+                      type="button"
+                      aria-label="Удалить карточку"
+                      onClick={() => onDelete(card)}
+                      className="action-icon-btn border-rose-300/80 text-rose-600 hover:border-rose-400 hover:text-rose-700 dark:border-rose-500/50 dark:text-rose-300"
+                    >
+                      🗑
+                    </button>
+                  )}
                 </>
               )}
             </div>
@@ -530,42 +534,6 @@ export function Flashcard({
             </div>
           )}
 
-          {onReact && (
-            <div className="mb-4 flex items-center justify-between gap-2">
-              <div className="inline-flex items-center gap-2 rounded-full border border-slate-300/70 bg-white/70 px-2 py-1 dark:border-slate-600 dark:bg-[#23293a]/85">
-                <button
-                  type="button"
-                  aria-label="Поставить лайк"
-                  onClick={() => void handleReaction(1)}
-                  disabled={reactionPending !== null}
-                  className={`${reactionButtonBaseClass} ${reactionPulse === 1 ? 'reaction-bounce' : ''} ${
-                    userReaction === 1
-                      ? 'bg-emerald-500 text-white'
-                      : 'text-slate-600/85 hover:bg-emerald-500/15 hover:text-slate-700 dark:text-slate-300'
-                  } ${reactionPending !== null ? 'opacity-70' : ''}`}
-                >
-                  👍 {likesCount}
-                </button>
-                <button
-                  type="button"
-                  aria-label="Поставить дизлайк"
-                  onClick={() => void handleReaction(-1)}
-                  disabled={reactionPending !== null}
-                  className={`${reactionButtonBaseClass} ${reactionPulse === -1 ? 'reaction-bounce' : ''} ${
-                    userReaction === -1
-                      ? 'bg-rose-500 text-white'
-                      : 'text-slate-600/85 hover:bg-rose-500/15 hover:text-slate-700 dark:text-slate-300'
-                  } ${reactionPending !== null ? 'opacity-70' : ''}`}
-                >
-                  👎 {dislikesCount}
-                </button>
-              </div>
-              <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-slate-500/70 dark:text-slate-400/70">
-                Score: {score > 0 ? `+${score}` : score}
-              </span>
-            </div>
-          )}
-
           <div
             className={`transition-all duration-300 ${
               isFlipped ? 'translate-y-1 opacity-0' : 'translate-y-0 opacity-100'
@@ -577,7 +545,45 @@ export function Flashcard({
             </h3>
           </div>
 
-          <div className="mt-auto pt-4">
+          <div className="mt-auto space-y-3 pt-4">
+            {onReact && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Понравился вопрос?</p>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-slate-300/70 bg-white/70 px-2 py-1 dark:border-slate-600 dark:bg-[#23293a]/85">
+                    <button
+                      type="button"
+                      aria-label="Поставить лайк"
+                      onClick={() => void handleReaction(1)}
+                      disabled={reactionPending !== null}
+                      className={`${reactionButtonBaseClass} ${reactionPulse === 1 ? 'reaction-bounce' : ''} ${
+                        userReaction === 1
+                          ? 'bg-emerald-500 text-white'
+                          : 'text-slate-600/85 hover:bg-emerald-500/15 hover:text-slate-700 dark:text-slate-300'
+                      } ${reactionPending !== null ? 'opacity-70' : ''}`}
+                    >
+                      👍 {likesCount}
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Поставить дизлайк"
+                      onClick={() => void handleReaction(-1)}
+                      disabled={reactionPending !== null}
+                      className={`${reactionButtonBaseClass} ${reactionPulse === -1 ? 'reaction-bounce' : ''} ${
+                        userReaction === -1
+                          ? 'bg-rose-500 text-white'
+                          : 'text-slate-600/85 hover:bg-rose-500/15 hover:text-slate-700 dark:text-slate-300'
+                      } ${reactionPending !== null ? 'opacity-70' : ''}`}
+                    >
+                      👎 {dislikesCount}
+                    </button>
+                  </div>
+                  <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-slate-500/70 dark:text-slate-400/70">
+                    Репутация: {score > 0 ? `+${score}` : score}
+                  </span>
+                </div>
+              </div>
+            )}
             {onNext && showNextOnQuestion ? (
               <div className="grid grid-cols-2 gap-2">
                 <button type="button" onClick={handleReveal} className="cta-button px-4 py-3 text-sm">
@@ -604,41 +610,6 @@ export function Flashcard({
         >
           <div className={`flex h-full flex-col ${isFlipped ? 'answer-reveal' : 'translate-y-2 opacity-0'}`}>
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500/65 dark:text-slate-400/65">Ответ</p>
-            {showReactionsOnBack && onReact && (
-              <div className="mb-4 flex items-center justify-between gap-2">
-                <div className="inline-flex items-center gap-2 rounded-full border border-slate-300/70 bg-white/70 px-2 py-1 dark:border-slate-600 dark:bg-[#23293a]/85">
-                  <button
-                    type="button"
-                    aria-label="Поставить лайк"
-                    onClick={() => void handleReaction(1)}
-                    disabled={reactionPending !== null}
-                    className={`${reactionButtonBaseClass} ${reactionPulse === 1 ? 'reaction-bounce' : ''} ${
-                      userReaction === 1
-                        ? 'bg-emerald-500 text-white'
-                        : 'text-slate-600/85 hover:bg-emerald-500/15 hover:text-slate-700 dark:text-slate-300'
-                    } ${reactionPending !== null ? 'opacity-70' : ''}`}
-                  >
-                    👍 {likesCount}
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Поставить дизлайк"
-                    onClick={() => void handleReaction(-1)}
-                    disabled={reactionPending !== null}
-                    className={`${reactionButtonBaseClass} ${reactionPulse === -1 ? 'reaction-bounce' : ''} ${
-                      userReaction === -1
-                        ? 'bg-rose-500 text-white'
-                        : 'text-slate-600/85 hover:bg-rose-500/15 hover:text-slate-700 dark:text-slate-300'
-                    } ${reactionPending !== null ? 'opacity-70' : ''}`}
-                  >
-                    👎 {dislikesCount}
-                  </button>
-                </div>
-                <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-slate-500/70 dark:text-slate-400/70">
-                  Score: {score > 0 ? `+${score}` : score}
-                </span>
-              </div>
-            )}
             <div className="space-y-3.5">
               {answerBlocks.map((block, index) =>
                 block.type === 'list' ? (
@@ -690,7 +661,45 @@ export function Flashcard({
               )}
             </div>
 
-            <div className="mt-auto pt-4">
+            <div className="mt-auto space-y-3 pt-4">
+              {showReactionsOnBack && onReact && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Понравился вопрос?</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-slate-300/70 bg-white/70 px-2 py-1 dark:border-slate-600 dark:bg-[#23293a]/85">
+                      <button
+                        type="button"
+                        aria-label="Поставить лайк"
+                        onClick={() => void handleReaction(1)}
+                        disabled={reactionPending !== null}
+                        className={`${reactionButtonBaseClass} ${reactionPulse === 1 ? 'reaction-bounce' : ''} ${
+                          userReaction === 1
+                            ? 'bg-emerald-500 text-white'
+                            : 'text-slate-600/85 hover:bg-emerald-500/15 hover:text-slate-700 dark:text-slate-300'
+                        } ${reactionPending !== null ? 'opacity-70' : ''}`}
+                      >
+                        👍 {likesCount}
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Поставить дизлайк"
+                        onClick={() => void handleReaction(-1)}
+                        disabled={reactionPending !== null}
+                        className={`${reactionButtonBaseClass} ${reactionPulse === -1 ? 'reaction-bounce' : ''} ${
+                          userReaction === -1
+                            ? 'bg-rose-500 text-white'
+                            : 'text-slate-600/85 hover:bg-rose-500/15 hover:text-slate-700 dark:text-slate-300'
+                        } ${reactionPending !== null ? 'opacity-70' : ''}`}
+                      >
+                        👎 {dislikesCount}
+                      </button>
+                    </div>
+                    <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-slate-500/70 dark:text-slate-400/70">
+                      Репутация: {score > 0 ? `+${score}` : score}
+                    </span>
+                  </div>
+                </div>
+              )}
               {onNext ? (
                 <div className="grid grid-cols-2 gap-2">
                   <button

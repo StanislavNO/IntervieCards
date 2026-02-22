@@ -25,6 +25,8 @@ if (!Array.isArray(cards)) {
   process.exit(1);
 }
 
+const defaultAuthor = 'stanislavnur';
+
 const sqlLines = [];
 
 for (const card of cards) {
@@ -34,6 +36,7 @@ for (const card of cards) {
   const sources = Array.isArray(card?.sources) ? card.sources.filter((s) => typeof s === 'string') : [];
   const tags = Array.isArray(card?.tags) ? card.tags.filter((t) => typeof t === 'string') : [];
   const difficulty = ['easy', 'medium', 'hard'].includes(card?.difficulty) ? card.difficulty : 'easy';
+  const author = isNonEmptyString(card?.author) ? card.author.trim() : defaultAuthor;
   const createdAt = parseDate(card?.createdAt);
   const updatedAt = createdAt;
 
@@ -42,16 +45,17 @@ for (const card of cards) {
   }
 
   sqlLines.push(`
-INSERT INTO cards (id, question, answer, sources, tags, difficulty, created_at, updated_at, deleted_at)
+INSERT INTO cards (id, question, answer, sources, tags, difficulty, author, created_at, updated_at, deleted_at)
 VALUES (${sqlString(id)}, ${sqlString(question)}, ${sqlString(answer)}, ${sqlString(JSON.stringify(sources))}, ${sqlString(
     JSON.stringify(tags)
-  )}, ${sqlString(difficulty)}, ${sqlString(createdAt)}, ${sqlString(updatedAt)}, NULL)
+  )}, ${sqlString(difficulty)}, ${sqlString(author)}, ${sqlString(createdAt)}, ${sqlString(updatedAt)}, NULL)
 ON CONFLICT(id) DO UPDATE SET
   question = excluded.question,
   answer = excluded.answer,
   sources = excluded.sources,
   tags = excluded.tags,
   difficulty = excluded.difficulty,
+  author = excluded.author,
   created_at = excluded.created_at,
   updated_at = excluded.updated_at,
   deleted_at = NULL;`.trim());

@@ -8,6 +8,7 @@ import { TelegramAuthControl } from './TelegramAuthControl';
 
 const defaultTagOptions = ['C#', 'Математика', 'Rendering', 'Physics', 'Architecture', 'Networking', 'ECS'];
 const masteredStorageKey = 'unityprep-mastered-cards';
+const ownerUsername = 'stanislavnur';
 
 type ModalState = {
   mode: 'create' | 'edit';
@@ -31,6 +32,15 @@ type Props = {
 
 function normalizeTag(tag: string): string {
   return tag.trim().toLowerCase();
+}
+
+function normalizeUsername(username: string | undefined): string {
+  return (username ?? '').trim().toLowerCase();
+}
+
+function hasRemovedTags(previousTags: string[], nextTags: string[]): boolean {
+  const nextSet = new Set(nextTags.map(normalizeTag));
+  return previousTags.some((tag) => !nextSet.has(normalizeTag(tag)));
 }
 
 function shuffle<T>(items: T[]): T[] {
@@ -244,6 +254,13 @@ export function PracticeWorkspace({
       return;
     }
 
+    const current = cards.find((card) => card.id === id);
+    if (current && hasRemovedTags(current.tags, payload.tags) && !canDeleteCardsAndTags) {
+      const permissionError = new Error('Удалять теги может только пользователь stanislavnur.');
+      setError(permissionError.message);
+      throw permissionError;
+    }
+
     try {
       setError(null);
       const updated = await cardsApi.update(id, payload);
@@ -259,6 +276,10 @@ export function PracticeWorkspace({
 
   async function handleDelete(card: Card) {
     if (!ensureAuthorized('удалять карточки')) {
+      return;
+    }
+    if (!canDeleteCardsAndTags) {
+      setError('Удалять карточки может только пользователь stanislavnur.');
       return;
     }
 
@@ -401,6 +422,8 @@ export function PracticeWorkspace({
 
   const masteredCount = cards.filter((card) => masteredSet.has(card.id)).length;
   const studySessionFinished = studyPool.length > 0 && studyHistoryEntries.length > 0 && !studyCurrentCard;
+  const canAddCard = !authEnabled || Boolean(authUser);
+  const canDeleteCardsAndTags = normalizeUsername(authUser?.username) === ownerUsername;
 
   return (
     <div className="relative isolate min-h-screen overflow-x-hidden">
@@ -471,7 +494,6 @@ export function PracticeWorkspace({
                   user={authUser}
                   loading={authLoading}
                   onUserChange={onAuthChange}
-                  onAddCard={() => setModal({ mode: 'create', card: null })}
                   className="shrink-0"
                 />
               )}
@@ -527,7 +549,7 @@ export function PracticeWorkspace({
 
         {viewMode === 'browse' && (
           <section className="surface-panel p-5">
-            <div className="mb-5 grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
+            <div className="mb-5 grid gap-4 xl:grid-cols-[1fr_auto_auto] xl:items-end">
               <label className="grid gap-2">
                 <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Поиск в банке вопросов</span>
                 <input
@@ -544,19 +566,16 @@ export function PracticeWorkspace({
                 <p>{statusText}</p>
                 <p>Освоено: {masteredCount}</p>
               </div>
-            </div>
 
-            {!authEnabled && (
-              <div className="mb-4 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setModal({ mode: 'create', card: null })}
-                  className="rounded-xl border border-slate-300 bg-white/75 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-brand-400 hover:text-brand-600 dark:border-slate-600 dark:bg-[#252b3a]/80 dark:text-slate-200"
-                >
-                  Добавить карточку
-                </button>
-              </div>
-            )}
+              <button
+                type="button"
+                onClick={() => setModal({ mode: 'create', card: null })}
+                disabled={!canAddCard}
+                className="cta-button h-11 px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-55"
+              >
+                {canAddCard ? '+ Добавить карточку' : 'Войдите, чтобы добавить'}
+              </button>
+            </div>
 
             <div className="mb-4 inline-flex rounded-xl border border-slate-300 bg-white/75 p-1 dark:border-slate-600 dark:bg-[#252b3a]/80">
               <button
@@ -629,7 +648,7 @@ export function PracticeWorkspace({
                     mastered={masteredSet.has(card.id)}
                     onToggleMastered={(selected) => toggleMastered(selected.id)}
                     onEdit={(selected) => setModal({ mode: 'edit', card: selected })}
-                    onDelete={(selected) => void handleDelete(selected)}
+                    onDelete={canDeleteCardsAndTags ? (selected) => void handleDelete(selected) : undefined}
                     showActions={authEnabled ? Boolean(authUser) : true}
                     onReact={(selected, value) => handleReaction(selected.id, value)}
                   />
@@ -752,7 +771,6 @@ export function PracticeWorkspace({
                         swipeEnabled={false}
                         motionEnabled={false}
                         onNext={() => drawNextStudyCard()}
-                        showNextOnQuestion
                         nextLabel="Следующий вопрос"
                         className="mx-auto max-w-2xl study-card-enter"
                         onReact={authEnabled && !authUser ? undefined : (selected, value) => handleReaction(selected.id, value)}
@@ -818,6 +836,7 @@ export function PracticeWorkspace({
           mode={modal.mode}
           card={modal.card}
           availableTags={availableTags}
+          canRemoveTags={modal.mode === 'create' ? true : canDeleteCardsAndTags}
           onClose={() => setModal(null)}
           onSubmit={(payload) => {
             if (modal.mode === 'create') {

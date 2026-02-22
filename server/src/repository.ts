@@ -19,11 +19,14 @@ type SeedCard = {
   sources?: string[];
   tags?: string[];
   difficulty?: Difficulty;
+  author?: string;
   likesCount?: number;
   dislikesCount?: number;
   score?: number;
   userReaction?: -1 | 0 | 1;
 };
+
+const DEFAULT_CARD_AUTHOR = 'stanislavnur';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -54,7 +57,11 @@ export class FileCardRepository implements CardRepository {
     try {
       const raw = await fs.readFile(this.cardsPath, 'utf8');
       const parsed = JSON.parse(raw) as Partial<Card>[];
+      const needsAuthorBackfill = parsed.some((card) => typeof card.author !== 'string' || card.author.trim().length === 0);
       this.cards = parsed.map((card) => this.normalizeCard(card));
+      if (needsAuthorBackfill) {
+        await this.persist();
+      }
       return;
     } catch {
       // cards file is missing or malformed, bootstrap from seeds
@@ -71,6 +78,7 @@ export class FileCardRepository implements CardRepository {
       sources: seed.sources ?? [],
       tags: seed.tags ?? [],
       difficulty: seed.difficulty ?? 'easy',
+      author: this.normalizeAuthor(seed.author),
       createdAt: now,
       likesCount: Number.isFinite(seed.likesCount) ? Math.max(0, Number(seed.likesCount)) : 0,
       dislikesCount: Number.isFinite(seed.dislikesCount) ? Math.max(0, Number(seed.dislikesCount)) : 0,
@@ -99,6 +107,7 @@ export class FileCardRepository implements CardRepository {
       sources: input.sources ?? [],
       tags: input.tags ?? [],
       difficulty: input.difficulty ?? 'easy',
+      author: this.normalizeAuthor(input.author),
       createdAt: new Date().toISOString(),
       likesCount: 0,
       dislikesCount: 0,
@@ -218,11 +227,21 @@ export class FileCardRepository implements CardRepository {
       sources: Array.isArray(card.sources) ? card.sources : [],
       tags: Array.isArray(card.tags) ? card.tags : [],
       difficulty: card.difficulty === 'medium' || card.difficulty === 'hard' ? card.difficulty : 'easy',
+      author: this.normalizeAuthor(card.author),
       createdAt: card.createdAt ?? new Date().toISOString(),
       likesCount,
       dislikesCount,
       score,
       userReaction: normalizedReaction
     };
+  }
+
+  private normalizeAuthor(value: unknown): string {
+    if (typeof value !== 'string') {
+      return DEFAULT_CARD_AUTHOR;
+    }
+
+    const normalized = value.trim();
+    return normalized || DEFAULT_CARD_AUTHOR;
   }
 }

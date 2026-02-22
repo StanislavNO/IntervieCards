@@ -33,13 +33,16 @@ type TelegramPayload = {
   hash: string;
 };
 
-function buildTelegramPayload(): TelegramPayload {
-  const payload = {
+type TelegramPayloadInput = Omit<TelegramPayload, 'hash'>;
+
+function buildTelegramPayload(overrides: Partial<TelegramPayloadInput> = {}): TelegramPayload {
+  const payload: TelegramPayloadInput = {
     id: '99887766',
     first_name: 'Stanislav',
     last_name: 'NO',
     username: 'stanislav_no',
-    auth_date: Math.floor(Date.now() / 1000)
+    auth_date: Math.floor(Date.now() / 1000),
+    ...overrides
   };
 
   const dataCheckString = Object.entries(payload)
@@ -56,8 +59,8 @@ function buildTelegramPayload(): TelegramPayload {
   };
 }
 
-async function loginAndGetToken(app: ReturnType<typeof createApp>): Promise<string> {
-  const payload = buildTelegramPayload();
+async function loginAndGetToken(app: ReturnType<typeof createApp>, overrides: Partial<TelegramPayloadInput> = {}): Promise<string> {
+  const payload = buildTelegramPayload(overrides);
   const response = await request(app).post('/api/auth/telegram').send(payload);
   expect(response.status).toBe(200);
   return response.body.token as string;
@@ -89,6 +92,7 @@ describe('cards api', () => {
     expect(response.body[0]).toHaveProperty('id');
     expect(response.body[0].tags).toEqual(expect.any(Array));
     expect(response.body[0].difficulty).toEqual(expect.any(String));
+    expect(response.body[0].author).toBe('stanislavnur');
   });
 
   it('creates a card', async () => {
@@ -108,13 +112,14 @@ describe('cards api', () => {
     expect(createResponse.body.question).toBe('New question');
     expect(createResponse.body.tags).toEqual(['ECS', 'C#']);
     expect(createResponse.body.difficulty).toBe('easy');
+    expect(createResponse.body.author).toBe('stanislav_no');
 
     const listResponse = await request(app).get('/api/cards');
     expect(listResponse.body).toHaveLength(3);
   });
 
   it('updates a card', async () => {
-    const token = await loginAndGetToken(app);
+    const token = await loginAndGetToken(app, { username: 'stanislavnur' });
     const listResponse = await request(app).get('/api/cards');
     const cardId = listResponse.body[0].id as string;
 
@@ -136,7 +141,7 @@ describe('cards api', () => {
   });
 
   it('deletes a card', async () => {
-    const token = await loginAndGetToken(app);
+    const token = await loginAndGetToken(app, { username: 'stanislavnur' });
     const listResponse = await request(app).get('/api/cards');
     const cardId = listResponse.body[0].id as string;
 
@@ -145,6 +150,35 @@ describe('cards api', () => {
 
     const nextList = await request(app).get('/api/cards');
     expect(nextList.body).toHaveLength(1);
+  });
+
+  it('returns 403 when non-owner tries to delete a card', async () => {
+    const token = await loginAndGetToken(app, { username: 'another_user' });
+    const listResponse = await request(app).get('/api/cards');
+    const cardId = listResponse.body[0].id as string;
+
+    const deleteResponse = await request(app).delete(`/api/cards/${cardId}`).set('Authorization', `Bearer ${token}`);
+    expect(deleteResponse.status).toBe(403);
+  });
+
+  it('returns 403 when non-owner tries to remove tags', async () => {
+    const token = await loginAndGetToken(app, { username: 'another_user' });
+    const listResponse = await request(app).get('/api/cards');
+    const cardWithTags = (listResponse.body as Array<{ id: string; tags: string[] }>).find((card) => card.tags.length > 0);
+    expect(cardWithTags).toBeDefined();
+
+    const updateResponse = await request(app)
+      .put(`/api/cards/${cardWithTags!.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        question: 'Updated',
+        answer: 'Updated answer',
+        sources: ['src2'],
+        tags: [],
+        difficulty: 'hard'
+      });
+
+    expect(updateResponse.status).toBe(403);
   });
 
   it('returns 404 for missing card', async () => {

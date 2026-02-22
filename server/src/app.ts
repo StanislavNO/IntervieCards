@@ -3,7 +3,10 @@ import express from 'express';
 import { ZodError } from 'zod';
 import { issueAuthToken, parseBearerToken, resolveAuthSecret, verifyAuthToken, verifyTelegramAuthPayload } from './auth.js';
 import type { CardRepository } from './repository.js';
+import type { AuthUser } from './types.js';
 import { createCardSchema, reactCardSchema, telegramAuthSchema, updateCardSchema } from './validation.js';
+
+const ownerUsername = 'stanislavnur';
 
 export function createApp(repository: CardRepository) {
   const app = express();
@@ -69,7 +72,36 @@ export function createApp(repository: CardRepository) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
+    res.locals.authUser = user;
     return next();
+  }
+
+  function resolveCardAuthor(user: AuthUser | undefined): string {
+    if (!user) {
+      return 'stanislavnur';
+    }
+
+    const candidates = [user.username, [user.firstName, user.lastName].filter(Boolean).join(' '), user.id];
+    for (const candidate of candidates) {
+      if (typeof candidate === 'string' && candidate.trim().length > 0) {
+        return candidate.trim();
+      }
+    }
+
+    return 'stanislavnur';
+  }
+
+  function normalizeTag(tag: string): string {
+    return tag.trim().toLowerCase();
+  }
+
+  function hasRemovedTags(previousTags: string[], nextTags: string[]): boolean {
+    const nextSet = new Set(nextTags.map(normalizeTag));
+    return previousTags.some((tag) => !nextSet.has(normalizeTag(tag)));
+  }
+
+  function isOwnerUser(user: AuthUser | undefined): boolean {
+    return (user?.username ?? '').trim().toLowerCase() === ownerUsername;
   }
 
   function getRouteId(req: express.Request): string {
@@ -101,7 +133,8 @@ export function createApp(repository: CardRepository) {
   app.post('/api/cards', requireAuth, async (req, res, next) => {
     try {
       const parsed = createCardSchema.parse(req.body);
-      const card = await repository.create(parsed);
+      const author = resolveCardAuthor(res.locals.authUser as AuthUser | undefined);
+      const card = await repository.create({ ...parsed, author });
       res.status(201).json(card);
     } catch (error) {
       next(error);
@@ -110,8 +143,19 @@ export function createApp(repository: CardRepository) {
 
   app.put('/api/cards/:id', requireAuth, async (req, res, next) => {
     try {
+      const id = getRouteId(req);
       const parsed = updateCardSchema.parse(req.body);
-      const card = await repository.update(getRouteId(req), parsed);
+      const current = await repository.getById(id);
+      if (!current) {
+        return res.status(404).json({ error: 'Card not found' });
+      }
+
+      const authUser = res.locals.authUser as AuthUser | undefined;
+      if (parsed.tags && hasRemovedTags(current.tags, parsed.tags) && !isOwnerUser(authUser)) {
+        return res.status(403).json({ error: 'Only stanislavnur can delete tags' });
+      }
+
+      const card = await repository.update(id, parsed);
 
       if (!card) {
         return res.status(404).json({ error: 'Card not found' });
@@ -125,6 +169,11 @@ export function createApp(repository: CardRepository) {
 
   app.delete('/api/cards/:id', requireAuth, async (req, res, next) => {
     try {
+      const authUser = res.locals.authUser as AuthUser | undefined;
+      if (!isOwnerUser(authUser)) {
+        return res.status(403).json({ error: 'Only stanislavnur can delete cards' });
+      }
+
       const removed = await repository.remove(getRouteId(req));
       if (!removed) {
         return res.status(404).json({ error: 'Card not found' });

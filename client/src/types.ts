@@ -9,6 +9,7 @@ export type Card = {
   sources: string[];
   tags: string[];
   difficulty: Difficulty;
+  author: string;
   createdAt: string;
   updatedAt?: string;
   likesCount?: number;

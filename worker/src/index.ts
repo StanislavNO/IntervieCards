@@ -21,6 +21,7 @@ type Card = {
   sources: string[];
   tags: string[];
   difficulty: Difficulty;
+  author: string;
   createdAt: string;
   updatedAt: string;
   likesCount: number;
@@ -36,6 +37,7 @@ type CardRow = {
   sources: string;
   tags: string;
   difficulty: string;
+  author: string | null;
   created_at: string;
   updated_at: string;
   likes_count: number | string | null;
@@ -84,6 +86,8 @@ type AuthUser = {
 
 const telegramAuthMaxAgeSeconds = 24 * 60 * 60;
 const authTokenLifetimeSeconds = 30 * 24 * 60 * 60;
+const DEFAULT_CARD_AUTHOR = 'stanislavnur';
+const OWNER_USERNAME = 'stanislavnur';
 const tokenHeader = { alg: 'HS256', typ: 'JWT' } as const;
 const textEncoder = new TextEncoder();
 const nonEmpty = z.string().trim().min(1);
@@ -216,6 +220,7 @@ app.get('/api/cards', async (c) => {
         c.sources,
         c.tags,
         c.difficulty,
+        c.author,
         c.created_at,
         c.updated_at,
         COALESCE(SUM(CASE WHEN r.value = 1 THEN 1 ELSE 0 END), 0) AS likes_count,
@@ -262,6 +267,7 @@ app.post('/api/cards', async (c) => {
   }
 
   const now = new Date().toISOString();
+  const author = await resolveRequestAuthor(c);
   const card: Card = {
     id: crypto.randomUUID(),
     question: parsed.data.question,
@@ -269,6 +275,7 @@ app.post('/api/cards', async (c) => {
     sources: parsed.data.sources,
     tags: parsed.data.tags,
     difficulty: parsed.data.difficulty,
+    author,
     createdAt: now,
     updatedAt: now,
     likesCount: 0,
@@ -279,8 +286,8 @@ app.post('/api/cards', async (c) => {
 
   await c.env.DB.prepare(
     `
-      INSERT INTO cards (id, question, answer, sources, tags, difficulty, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO cards (id, question, answer, sources, tags, difficulty, author, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `
   )
     .bind(
@@ -290,6 +297,7 @@ app.post('/api/cards', async (c) => {
       JSON.stringify(card.sources),
       JSON.stringify(card.tags),
       card.difficulty,
+      card.author,
       card.createdAt,
       card.updatedAt
     )
@@ -319,6 +327,13 @@ app.put('/api/cards/:id', async (c) => {
   const parsed = updateCardSchema.safeParse(body.value);
   if (!parsed.success) {
     return c.json({ error: 'Validation error', details: parsed.error.issues }, 400);
+  }
+
+  if (parsed.data.tags && hasRemovedTags(current.tags, parsed.data.tags)) {
+    const user = await resolveRequestUser(c);
+    if (!isOwnerUser(user)) {
+      return c.json({ error: 'Only stanislavnur can delete tags' }, 403);
+    }
   }
 
   const next: Card = {
@@ -355,6 +370,11 @@ app.delete('/api/cards/:id', async (c) => {
   const unauthorized = await requireAuth(c);
   if (unauthorized) {
     return unauthorized;
+  }
+
+  const user = await resolveRequestUser(c);
+  if (!isOwnerUser(user)) {
+    return c.json({ error: 'Only stanislavnur can delete cards' }, 403);
   }
 
   const id = c.req.param('id');
@@ -566,6 +586,44 @@ async function requireAuth(c: Context<{ Bindings: Bindings }>): Promise<Response
   return null;
 }
 
+async function resolveRequestUser(c: Context<{ Bindings: Bindings }>): Promise<AuthUser | null> {
+  const token = parseBearerToken(c.req.header('authorization'));
+  if (!token) {
+    return null;
+  }
+
+  return verifyAuthToken(token, resolveAuthSecret(c.env));
+}
+
+async function resolveRequestAuthor(c: Context<{ Bindings: Bindings }>): Promise<string> {
+  const user = await resolveRequestUser(c);
+  if (!user) {
+    return DEFAULT_CARD_AUTHOR;
+  }
+
+  const candidates = [user.username, [user.firstName, user.lastName].filter(Boolean).join(' '), user.id];
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+      return candidate.trim();
+    }
+  }
+
+  return DEFAULT_CARD_AUTHOR;
+}
+
+function normalizeTag(tag: string): string {
+  return tag.trim().toLowerCase();
+}
+
+function hasRemovedTags(previousTags: string[], nextTags: string[]): boolean {
+  const nextSet = new Set(nextTags.map(normalizeTag));
+  return previousTags.some((tag) => !nextSet.has(normalizeTag(tag)));
+}
+
+function isOwnerUser(user: AuthUser | null | undefined): boolean {
+  return (user?.username ?? '').trim().toLowerCase() === OWNER_USERNAME;
+}
+
 function parseBearerToken(headerValue: string | undefined): string | null {
   if (!headerValue) {
     return null;
@@ -730,6 +788,7 @@ function mapCard(row: CardRow): Card {
     sources: parseJsonArray(row.sources),
     tags: parseJsonArray(row.tags),
     difficulty: normalizeDifficulty(row.difficulty),
+    author: normalizeAuthor(row.author),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     likesCount: numberFromDb(row.likes_count),
@@ -737,6 +796,15 @@ function mapCard(row: CardRow): Card {
     score: numberFromDb(row.score),
     userReaction: normalizeUserReaction(row.user_reaction)
   };
+}
+
+function normalizeAuthor(value: string | null | undefined): string {
+  if (typeof value !== 'string') {
+    return DEFAULT_CARD_AUTHOR;
+  }
+
+  const normalized = value.trim();
+  return normalized || DEFAULT_CARD_AUTHOR;
 }
 
 function parseJsonArray(value: string): string[] {
@@ -786,6 +854,7 @@ async function getCardById(db: D1Database, id: string, requesterHash: string): P
           c.sources,
           c.tags,
           c.difficulty,
+          c.author,
           c.created_at,
           c.updated_at,
           COALESCE(SUM(CASE WHEN r.value = 1 THEN 1 ELSE 0 END), 0) AS likes_count,

@@ -16,6 +16,7 @@ type CardRow = {
   sources: string[] | null;
   tags: string[] | null;
   difficulty: string;
+  author: string | null;
   created_at: Date | string;
   likes_count: number | string;
   dislikes_count: number | string;
@@ -30,6 +31,7 @@ type PostgresRepositoryOptions = {
 };
 
 const allowedDifficulties = new Set<Difficulty>(['easy', 'medium', 'hard']);
+const DEFAULT_CARD_AUTHOR = 'stanislavnur';
 
 export class PostgresCardRepository implements CardRepository {
   private readonly pool: Pool;
@@ -54,6 +56,7 @@ export class PostgresCardRepository implements CardRepository {
         sources TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
         tags TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
         difficulty TEXT NOT NULL DEFAULT 'easy' CHECK (difficulty IN ('easy', 'medium', 'hard')),
+        author TEXT NOT NULL DEFAULT 'stanislavnur',
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         likes_count INTEGER NOT NULL DEFAULT 0,
         dislikes_count INTEGER NOT NULL DEFAULT 0,
@@ -65,10 +68,12 @@ export class PostgresCardRepository implements CardRepository {
     await this.pool.query(`ALTER TABLE cards ADD COLUMN IF NOT EXISTS likes_count INTEGER NOT NULL DEFAULT 0`);
     await this.pool.query(`ALTER TABLE cards ADD COLUMN IF NOT EXISTS dislikes_count INTEGER NOT NULL DEFAULT 0`);
     await this.pool.query(`ALTER TABLE cards ADD COLUMN IF NOT EXISTS score INTEGER NOT NULL DEFAULT 0`);
+    await this.pool.query(`ALTER TABLE cards ADD COLUMN IF NOT EXISTS author TEXT NOT NULL DEFAULT 'stanislavnur'`);
     await this.pool.query(
       `ALTER TABLE cards ADD COLUMN IF NOT EXISTS user_reaction SMALLINT NOT NULL DEFAULT 0 CHECK (user_reaction IN (-1, 0, 1))`
     );
     await this.pool.query(`UPDATE cards SET score = likes_count - dislikes_count WHERE score <> likes_count - dislikes_count`);
+    await this.pool.query(`UPDATE cards SET author = 'stanislavnur' WHERE author IS NULL OR btrim(author) = ''`);
 
     await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_cards_created_at ON cards (created_at DESC)`);
 
@@ -90,8 +95,8 @@ export class PostgresCardRepository implements CardRepository {
       for (const card of bootstrapCards) {
         await client.query(
           `
-          INSERT INTO cards (id, question, answer, sources, tags, difficulty, created_at, likes_count, dislikes_count, score, user_reaction)
-          VALUES ($1, $2, $3, $4::TEXT[], $5::TEXT[], $6, $7::TIMESTAMPTZ, $8, $9, $10, $11)
+          INSERT INTO cards (id, question, answer, sources, tags, difficulty, author, created_at, likes_count, dislikes_count, score, user_reaction)
+          VALUES ($1, $2, $3, $4::TEXT[], $5::TEXT[], $6, $7, $8::TIMESTAMPTZ, $9, $10, $11, $12)
           `,
           [
             card.id,
@@ -100,6 +105,7 @@ export class PostgresCardRepository implements CardRepository {
             card.sources,
             card.tags,
             card.difficulty,
+            card.author,
             card.createdAt,
             card.likesCount,
             card.dislikesCount,
@@ -121,7 +127,7 @@ export class PostgresCardRepository implements CardRepository {
   async getAll(): Promise<Card[]> {
     const result = await this.pool.query<CardRow>(
       `
-      SELECT id, question, answer, sources, tags, difficulty, created_at, likes_count, dislikes_count, score, user_reaction
+      SELECT id, question, answer, sources, tags, difficulty, author, created_at, likes_count, dislikes_count, score, user_reaction
       FROM cards
       ORDER BY created_at DESC
       `
@@ -132,7 +138,7 @@ export class PostgresCardRepository implements CardRepository {
   async getById(id: string): Promise<Card | null> {
     const result = await this.pool.query<CardRow>(
       `
-      SELECT id, question, answer, sources, tags, difficulty, created_at, likes_count, dislikes_count, score, user_reaction
+      SELECT id, question, answer, sources, tags, difficulty, author, created_at, likes_count, dislikes_count, score, user_reaction
       FROM cards
       WHERE id = $1
       `,
@@ -155,6 +161,7 @@ export class PostgresCardRepository implements CardRepository {
       sources: this.normalizeStringArray(input.sources),
       tags: this.normalizeStringArray(input.tags),
       difficulty: this.normalizeDifficulty(input.difficulty),
+      author: this.normalizeAuthor(input.author),
       createdAt,
       likesCount: 0,
       dislikesCount: 0,
@@ -164,8 +171,8 @@ export class PostgresCardRepository implements CardRepository {
 
     await this.pool.query(
       `
-      INSERT INTO cards (id, question, answer, sources, tags, difficulty, created_at, likes_count, dislikes_count, score, user_reaction)
-      VALUES ($1, $2, $3, $4::TEXT[], $5::TEXT[], $6, $7::TIMESTAMPTZ, $8, $9, $10, $11)
+      INSERT INTO cards (id, question, answer, sources, tags, difficulty, author, created_at, likes_count, dislikes_count, score, user_reaction)
+      VALUES ($1, $2, $3, $4::TEXT[], $5::TEXT[], $6, $7, $8::TIMESTAMPTZ, $9, $10, $11, $12)
       `,
       [
         card.id,
@@ -174,6 +181,7 @@ export class PostgresCardRepository implements CardRepository {
         card.sources,
         card.tags,
         card.difficulty,
+        card.author,
         card.createdAt,
         card.likesCount,
         card.dislikesCount,
@@ -318,6 +326,7 @@ export class PostgresCardRepository implements CardRepository {
       sources: this.normalizeStringArray(card.sources),
       tags: this.normalizeStringArray(card.tags),
       difficulty: this.normalizeDifficulty(card.difficulty),
+      author: this.normalizeAuthor(card.author),
       createdAt: this.normalizeDate(card.createdAt),
       likesCount,
       dislikesCount,
@@ -372,6 +381,7 @@ export class PostgresCardRepository implements CardRepository {
       sources: Array.isArray(row.sources) ? row.sources : [],
       tags: Array.isArray(row.tags) ? row.tags : [],
       difficulty: this.normalizeDifficulty(row.difficulty),
+      author: this.normalizeAuthor(row.author),
       createdAt: new Date(row.created_at).toISOString(),
       likesCount,
       dislikesCount,
@@ -393,5 +403,14 @@ export class PostgresCardRepository implements CardRepository {
   private normalizeUserReaction(value: unknown): -1 | 0 | 1 {
     const parsed = this.toInt(value);
     return parsed === -1 || parsed === 1 ? parsed : 0;
+  }
+
+  private normalizeAuthor(value: unknown): string {
+    if (typeof value !== 'string') {
+      return DEFAULT_CARD_AUTHOR;
+    }
+
+    const normalized = value.trim();
+    return normalized || DEFAULT_CARD_AUTHOR;
   }
 }

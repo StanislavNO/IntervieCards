@@ -272,7 +272,6 @@ export default function App() {
                   user={authUser}
                   loading={authLoading}
                   onUserChange={setAuthUser}
-                  onAddCard={() => openPractice('browse')}
                   className="shrink-0"
                 />
               )}

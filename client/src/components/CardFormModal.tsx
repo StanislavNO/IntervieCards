@@ -5,6 +5,7 @@ type Props = {
   mode: 'create' | 'edit';
   card: Card | null;
   availableTags: string[];
+  canRemoveTags?: boolean;
   onClose: () => void;
   onSubmit: (payload: CardPayload) => Promise<void>;
 };
@@ -40,7 +41,7 @@ function uniqStrings(values: string[]) {
   return result;
 }
 
-export function CardFormModal({ mode, card, availableTags, onClose, onSubmit }: Props) {
+export function CardFormModal({ mode, card, availableTags, canRemoveTags = true, onClose, onSubmit }: Props) {
   const [form, setForm] = useState<FormState>({
     question: '',
     answer: '',
@@ -89,6 +90,9 @@ export function CardFormModal({ mode, card, availableTags, onClose, onSubmit }: 
   const toggleTag = (tag: string) => {
     setForm((prev) => {
       if (prev.tags.some((entry) => entry.toLowerCase() === tag.toLowerCase())) {
+        if (!canRemoveTags) {
+          return prev;
+        }
         return {
           ...prev,
           tags: prev.tags.filter((entry) => entry.toLowerCase() !== tag.toLowerCase())
@@ -105,7 +109,7 @@ export function CardFormModal({ mode, card, availableTags, onClose, onSubmit }: 
   const removeTag = (tag: string) => {
     setForm((prev) => ({
       ...prev,
-      tags: prev.tags.filter((entry) => entry.toLowerCase() !== tag.toLowerCase())
+      tags: canRemoveTags ? prev.tags.filter((entry) => entry.toLowerCase() !== tag.toLowerCase()) : prev.tags
     }));
   };
 
@@ -236,12 +240,21 @@ export function CardFormModal({ mode, card, availableTags, onClose, onSubmit }: 
                     className="inline-flex items-center gap-1 rounded-full border border-brand-300/60 bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-700 dark:border-brand-500/40 dark:bg-brand-500/10 dark:text-brand-300"
                   >
                     {tag}
-                    <button type="button" aria-label={`Удалить тег ${tag}`} onClick={() => removeTag(tag)}>
+                    <button
+                      type="button"
+                      aria-label={`Удалить тег ${tag}`}
+                      onClick={() => removeTag(tag)}
+                      disabled={!canRemoveTags}
+                      className={!canRemoveTags ? 'cursor-not-allowed opacity-50' : ''}
+                    >
                       ×
                     </button>
                   </span>
                 ))}
               </div>
+            )}
+            {!canRemoveTags && mode === 'edit' && (
+              <p className="text-xs text-amber-700 dark:text-amber-300">Удалять теги может только пользователь stanislavnur.</p>
             )}
           </section>
 

@@ -7,7 +7,6 @@ type Props = {
   user: AuthUser | null;
   loading?: boolean;
   onUserChange: (user: AuthUser | null) => void;
-  onAddCard?: () => void;
   onProfile?: () => void;
   className?: string;
 };
@@ -33,7 +32,7 @@ function displayName(user: AuthUser): string {
   return [user.firstName, user.lastName].filter(Boolean).join(' ');
 }
 
-export function TelegramAuthControl({ user, loading = false, onUserChange, onAddCard, onProfile, className }: Props) {
+export function TelegramAuthControl({ user, loading = false, onUserChange, onProfile, className }: Props) {
   const widgetContainerRef = useRef<HTMLDivElement | null>(null);
   const callbackNameRef = useRef(`unityprepTelegramAuth_${Math.random().toString(36).slice(2)}`);
   const menuRootRef = useRef<HTMLDivElement | null>(null);
@@ -155,11 +154,6 @@ export function TelegramAuthControl({ user, loading = false, onUserChange, onAdd
     handleProfileClick();
   }
 
-  function runAddCardAction(onAddCard?: () => void) {
-    setMenuOpen(false);
-    onAddCard?.();
-  }
-
   if (loading) {
     return (
       <div className={`telegram-auth-inline auth-loading-state ${className ?? ''}`}>
@@ -196,11 +190,6 @@ export function TelegramAuthControl({ user, loading = false, onUserChange, onAdd
               <button type="button" className="auth-menu-item" onClick={() => runProfileAction(onProfile)}>
                 Профиль
               </button>
-              {onAddCard && (
-                <button type="button" className="auth-menu-item" onClick={() => runAddCardAction(onAddCard)}>
-                  Добавить карточку
-                </button>
-              )}
               <button type="button" className="auth-menu-item auth-menu-item-danger" onClick={handleLogout}>
                 Выйти
               </button>

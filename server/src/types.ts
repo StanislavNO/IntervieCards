@@ -28,6 +28,7 @@ export type Card = {
   sources: string[];
   tags: string[];
   difficulty: Difficulty;
+  author: string;
   createdAt: string;
   likesCount: number;
   dislikesCount: number;
@@ -41,6 +42,7 @@ export type NewCardInput = {
   sources?: string[];
   tags?: string[];
   difficulty?: Difficulty;
+  author?: string;
 };
 
 export type ReactionSummary = {
