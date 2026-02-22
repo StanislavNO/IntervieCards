@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { PracticeWorkspace } from './components/PracticeWorkspace';
+import { difficultyLabel, tagCategoryClass } from './utils/cardPresentation';
 
 type Theme = 'light' | 'dark';
 type PracticeView = 'browse' | 'study';
+type AppRoute = { page: 'landing' } | { page: 'practice'; view: PracticeView };
 
 type DemoCard = {
   question: string;
   answer: string;
   snippet: string;
   topic: string;
+  tags: string[];
+  difficulty: 'easy' | 'medium' | 'hard';
 };
 
 const themeStorageKey = 'unityprep-theme';
@@ -16,6 +20,8 @@ const themeStorageKey = 'unityprep-theme';
 const demoCards: DemoCard[] = [
   {
     topic: 'Жизненный цикл',
+    difficulty: 'easy',
+    tags: ['C#', 'Architecture'],
     question: 'В чем разница между Start() и Awake() в Unity?',
     answer:
       'Awake вызывается при загрузке объекта и подходит для ранней инициализации. Start вызывается перед первым Update, когда компонент уже активен.',
@@ -23,6 +29,8 @@ const demoCards: DemoCard[] = [
   },
   {
     topic: 'Физика',
+    difficulty: 'medium',
+    tags: ['Physics', 'Rendering'],
     question: 'Почему для физики лучше использовать FixedUpdate()?',
     answer:
       'FixedUpdate работает с фиксированным шагом времени. Это дает стабильный расчет сил и столкновений независимо от FPS.',
@@ -30,6 +38,8 @@ const demoCards: DemoCard[] = [
   },
   {
     topic: 'Производительность',
+    difficulty: 'hard',
+    tags: ['Architecture', 'ECS'],
     question: 'Зачем кэшировать GetComponent() в Unity?',
     answer:
       'Повторные вызовы GetComponent в Update стоят дорого. Кэширование ссылки снижает нагрузку на CPU в горячих местах.',
@@ -58,12 +68,42 @@ function detectInitialTheme(): Theme {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
+function parseRouteFromLocation(): AppRoute {
+  const params = new URLSearchParams(window.location.search);
+  const page = params.get('page');
+  const view = params.get('view');
+
+  if (page === 'practice') {
+    return { page: 'practice', view: view === 'browse' ? 'browse' : 'study' };
+  }
+
+  return { page: 'landing' };
+}
+
+function writeRoute(route: AppRoute, replace = false): void {
+  const url = new URL(window.location.href);
+
+  if (route.page === 'practice') {
+    url.searchParams.set('page', 'practice');
+    url.searchParams.set('view', route.view);
+  } else {
+    url.searchParams.delete('page');
+    url.searchParams.delete('view');
+  }
+
+  const method = replace ? 'replaceState' : 'pushState';
+  window.history[method]({}, '', `${url.pathname}${url.search}${url.hash}`);
+}
+
 export default function App() {
+  const initialRoute = parseRouteFromLocation();
   const [theme, setTheme] = useState<Theme>(detectInitialTheme);
   const [isRevealed, setIsRevealed] = useState(false);
   const [cardIndex, setCardIndex] = useState(0);
-  const [isPracticeOpen, setIsPracticeOpen] = useState(false);
-  const [practiceInitialView, setPracticeInitialView] = useState<PracticeView>('study');
+  const [isPracticeOpen, setIsPracticeOpen] = useState(initialRoute.page === 'practice');
+  const [practiceInitialView, setPracticeInitialView] = useState<PracticeView>(
+    initialRoute.page === 'practice' ? initialRoute.view : 'study'
+  );
 
   useEffect(() => {
     const root = document.documentElement;
@@ -71,6 +111,22 @@ export default function App() {
     root.dataset.theme = theme;
     localStorage.setItem(themeStorageKey, theme);
   }, [theme]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const route = parseRouteFromLocation();
+      if (route.page === 'practice') {
+        setPracticeInitialView(route.view);
+        setIsPracticeOpen(true);
+        return;
+      }
+
+      setIsPracticeOpen(false);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   const card = useMemo(() => demoCards[cardIndex], [cardIndex]);
 
@@ -86,6 +142,17 @@ export default function App() {
   function openPractice(view: PracticeView) {
     setPracticeInitialView(view);
     setIsPracticeOpen(true);
+    writeRoute({ page: 'practice', view });
+  }
+
+  function closePractice() {
+    setIsPracticeOpen(false);
+    writeRoute({ page: 'landing' });
+  }
+
+  function handlePracticeViewChange(view: PracticeView) {
+    setPracticeInitialView(view);
+    writeRoute({ page: 'practice', view }, true);
   }
 
   if (isPracticeOpen) {
@@ -94,18 +161,21 @@ export default function App() {
         initialView={practiceInitialView}
         theme={theme}
         onToggleTheme={toggleTheme}
-        onBack={() => setIsPracticeOpen(false)}
+        onBack={closePractice}
+        onViewModeChange={handlePracticeViewChange}
       />
     );
   }
 
   return (
-    <div className="relative overflow-hidden bg-zinc-100 dark:bg-[#161922]">
-      <div className="pointer-events-none absolute inset-0 bg-grid" />
-      <div className="pointer-events-none absolute inset-x-0 top-[-240px] h-[560px] bg-[radial-gradient(circle_at_top,_rgba(47,123,255,0.22),_transparent_62%)] dark:bg-[radial-gradient(circle_at_top,_rgba(138,109,255,0.25),_transparent_62%)]" />
+    <div className="relative isolate overflow-x-hidden">
+      <div className="pointer-events-none fixed inset-0 z-0 bg-grid" />
+      <div className="pointer-events-none fixed inset-0 z-0 bg-mesh" />
+      <div className="pointer-events-none fixed inset-0 z-0 bg-particles" />
+      <div className="pointer-events-none fixed inset-x-0 top-[-240px] z-0 h-[560px] bg-[radial-gradient(circle_at_top,_rgba(47,123,255,0.22),_transparent_62%)] dark:bg-[radial-gradient(circle_at_top,_rgba(138,109,255,0.25),_transparent_62%)]" />
 
-      <div className="relative mx-auto min-h-screen max-w-6xl px-6 pb-20 pt-6 lg:px-10">
-        <nav className="mb-14 flex items-center justify-between rounded-2xl border border-slate-200/70 bg-white/70 px-5 py-3 shadow-soft backdrop-blur dark:border-slate-700/60 dark:bg-[#1d212d]/80">
+      <div className="relative z-10 mx-auto min-h-screen max-w-6xl px-6 pb-20 pt-6 lg:px-10">
+        <nav className="surface-panel mb-14 flex items-center justify-between px-5 py-3">
           <div className="flex items-center gap-3">
             <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 text-lg font-bold text-white">
               U
@@ -166,14 +236,14 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => openPractice('study')}
-                className="rounded-xl bg-gradient-to-r from-brand-500 to-accent-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-500/30 transition hover:brightness-110"
+                className="cta-button px-5 py-3 text-sm"
               >
                 Начать тренировку
               </button>
               <button
                 type="button"
                 onClick={() => openPractice('browse')}
-                className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-brand-400 hover:text-brand-600 dark:border-slate-600 dark:bg-[#222838] dark:text-slate-200 dark:hover:border-brand-400 dark:hover:text-brand-300"
+                className="rounded-xl border border-slate-300 bg-white/75 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-brand-400 hover:text-brand-600 dark:border-slate-600 dark:bg-[#222838]/85 dark:text-slate-200 dark:hover:border-brand-400 dark:hover:text-brand-300"
               >
                 Открыть наборы вопросов
               </button>
@@ -194,23 +264,42 @@ export default function App() {
                   isRevealed ? '[transform:rotateY(180deg)]' : ''
                 }`}
               >
-                <article className="glass-card flip-face card-depth absolute inset-0 flex flex-col p-6 [transform:translateZ(0.1px)]">
+                <article
+                  className={`glass-card flip-face card-depth card-lux difficulty-${card.difficulty} absolute inset-0 flex flex-col p-6 [transform:translateZ(0.1px)]`}
+                >
+                  <div className="mb-3 flex items-center justify-between">
+                    <span className="difficulty-badge" data-difficulty={card.difficulty}>
+                      {difficultyLabel(card.difficulty)}
+                    </span>
+                    <span className="rounded-full border border-slate-300 px-2 py-1 text-[10px] text-slate-600 dark:border-slate-600 dark:text-slate-300">
+                      {card.topic}
+                    </span>
+                  </div>
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    {card.tags.map((tag) => (
+                      <span key={tag} className={`tag-chip ${tagCategoryClass(tag)}`}>
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Вопрос</p>
                   <h2 className="mt-4 text-2xl font-semibold leading-tight text-slate-900 dark:text-slate-100">{card.question}</h2>
                   <div className="mt-auto">
                     <button
                       type="button"
                       onClick={() => setIsRevealed(true)}
-                      className="w-full rounded-xl bg-gradient-to-r from-brand-500 to-accent-500 px-4 py-3 text-sm font-semibold text-white transition hover:brightness-110"
+                      className="cta-button w-full px-4 py-3 text-sm"
                     >
                       Показать ответ
                     </button>
                   </div>
                 </article>
 
-                <article className="glass-card flip-face card-depth absolute inset-0 flex flex-col p-6 [transform:rotateY(180deg)_translateZ(0.1px)]">
+                <article
+                  className={`glass-card flip-face card-depth card-lux difficulty-${card.difficulty} absolute inset-0 flex flex-col p-6 [transform:rotateY(180deg)_translateZ(0.1px)]`}
+                >
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Ответ</p>
-                  <p className="mt-4 text-sm leading-relaxed text-slate-700 dark:text-slate-200">{card.answer}</p>
+                  <p className="mt-4 max-w-[68ch] text-sm leading-7 text-slate-700 dark:text-slate-200">{card.answer}</p>
                   <pre className="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-slate-900/95 p-3 font-mono text-xs text-blue-100 dark:border-slate-600">
                     <code>{card.snippet}</code>
                   </pre>
@@ -225,7 +314,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={showNextCard}
-                      className="rounded-xl bg-gradient-to-r from-brand-500 to-accent-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110"
+                      className="cta-button px-4 py-2.5 text-sm"
                     >
                       Следующий вопрос
                     </button>
@@ -248,7 +337,7 @@ export default function App() {
             {features.map((feature) => (
               <article
                 key={feature.title}
-                className="glass-card card-depth p-6 transition hover:-translate-y-1"
+                className="surface-panel p-6 transition hover:-translate-y-1"
               >
                 <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{feature.title}</h4>
                 <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{feature.text}</p>

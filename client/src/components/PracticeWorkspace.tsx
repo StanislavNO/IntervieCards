@@ -20,6 +20,7 @@ type Props = {
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
   onBack: () => void;
+  onViewModeChange?: (view: ViewMode) => void;
 };
 
 function normalizeTag(tag: string): string {
@@ -70,7 +71,7 @@ function loadMasteredIds(): string[] {
   }
 }
 
-export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack }: Props) {
+export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack, onViewModeChange }: Props) {
   const [cards, setCards] = useState<Card[]>([]);
   const [browseSort, setBrowseSort] = useState<CardSort>('new');
   const [query, setQuery] = useState('');
@@ -90,6 +91,10 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack }:
   useEffect(() => {
     setViewMode(initialView);
   }, [initialView]);
+
+  useEffect(() => {
+    onViewModeChange?.(viewMode);
+  }, [onViewModeChange, viewMode]);
 
   useEffect(() => {
     void loadCards(browseSort);
