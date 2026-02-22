@@ -669,6 +669,7 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack, o
                         swipeEnabled={false}
                         motionEnabled={false}
                         onNext={() => drawNextStudyCard()}
+                        showNextOnQuestion
                         nextLabel="Следующий вопрос"
                         className="mx-auto max-w-2xl study-card-enter"
                         onReact={(selected, value) => handleReaction(selected.id, value)}

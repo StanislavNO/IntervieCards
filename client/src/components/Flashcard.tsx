@@ -24,6 +24,7 @@ type Props = {
   onSwipe?: (direction: SwipeDirection) => void;
   onSwipeProgress?: (offset: number, isDragging: boolean) => void;
   onNext?: () => void;
+  showNextOnQuestion?: boolean;
   nextLabel?: string;
   className?: string;
   motionEnabled?: boolean;
@@ -58,6 +59,7 @@ export function Flashcard({
   onSwipe,
   onSwipeProgress,
   onNext,
+  showNextOnQuestion = false,
   nextLabel = 'Следующий вопрос',
   className = '',
   motionEnabled = true
@@ -70,11 +72,13 @@ export function Flashcard({
   const [tilt, setTilt] = useState({ x: 0, y: 0, px: 50, py: 50 });
   const [showMasteredSweep, setShowMasteredSweep] = useState(false);
   const [reactionPending, setReactionPending] = useState<ReactionValue | null>(null);
+  const [isNextTransitioning, setIsNextTransitioning] = useState(false);
 
   const pointerStateRef = useRef<PointerState | null>(null);
   const swipeTimeoutRef = useRef<number | null>(null);
   const flipPulseTimeoutRef = useRef<number | null>(null);
   const masteredSweepTimeoutRef = useRef<number | null>(null);
+  const nextTransitionTimeoutRef = useRef<number | null>(null);
   const prevMasteredRef = useRef(mastered);
 
   useEffect(() => {
@@ -91,6 +95,9 @@ export function Flashcard({
       }
       if (masteredSweepTimeoutRef.current !== null) {
         window.clearTimeout(masteredSweepTimeoutRef.current);
+      }
+      if (nextTransitionTimeoutRef.current !== null) {
+        window.clearTimeout(nextTransitionTimeoutRef.current);
       }
       onSwipeProgress?.(0, false);
     };
@@ -141,6 +148,22 @@ export function Flashcard({
   const handleBack = () => {
     setIsFlipped(false);
     triggerFlipPulse();
+  };
+
+  const handleNext = () => {
+    if (!onNext || isNextTransitioning) {
+      return;
+    }
+
+    setIsNextTransitioning(true);
+    if (nextTransitionTimeoutRef.current !== null) {
+      window.clearTimeout(nextTransitionTimeoutRef.current);
+    }
+
+    nextTransitionTimeoutRef.current = window.setTimeout(() => {
+      setIsNextTransitioning(false);
+      onNext();
+    }, 180);
   };
 
   const handleReaction = async (value: ReactionValue) => {
@@ -295,14 +318,19 @@ export function Flashcard({
   };
 
   const articleStyle: CSSProperties & Record<'--px' | '--py', string> = {
-    transform: motionEnabled
+    transform: `${motionEnabled
       ? `translateX(${swipeOffset}px) rotate(${swipeOffset / 30}deg) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`
-      : `translateX(${swipeOffset}px) rotate(${swipeOffset / 30}deg)`,
+      : `translateX(${swipeOffset}px) rotate(${swipeOffset / 30}deg)`} ${
+      isNextTransitioning ? 'translateY(78px) scale(0.985)' : 'translateY(0) scale(1)'
+    }`,
     transition: isDragging
       ? 'none'
-      : swipeMomentum
-        ? 'transform 240ms cubic-bezier(0.14, 0.8, 0.25, 1)'
-        : 'transform 220ms cubic-bezier(0.2, 0.72, 0.2, 1)',
+      : isNextTransitioning
+        ? 'transform 180ms cubic-bezier(0.2, 0.72, 0.2, 1), opacity 180ms ease'
+        : swipeMomentum
+          ? 'transform 240ms cubic-bezier(0.14, 0.8, 0.25, 1)'
+          : 'transform 220ms cubic-bezier(0.2, 0.72, 0.2, 1)',
+    opacity: isNextTransitioning ? 0.18 : 1,
     '--px': `${tilt.px}%`,
     '--py': `${tilt.py}%`
   };
@@ -432,9 +460,24 @@ export function Flashcard({
           </div>
 
           <div className="mt-auto pt-4">
-            <button type="button" onClick={handleReveal} className="cta-button w-full px-4 py-2.5 text-sm">
-              Показать ответ
-            </button>
+            {onNext && showNextOnQuestion ? (
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={handleReveal} className="cta-button px-4 py-2.5 text-sm">
+                  Показать ответ
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="rounded-xl border border-slate-300 bg-white/75 px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-brand-400 hover:text-brand-600 dark:border-slate-600 dark:bg-[#242a3a] dark:text-slate-200"
+                >
+                  {nextLabel}
+                </button>
+              </div>
+            ) : (
+              <button type="button" onClick={handleReveal} className="cta-button w-full px-4 py-2.5 text-sm">
+                Показать ответ
+              </button>
+            )}
           </div>
         </section>
 
@@ -489,7 +532,7 @@ export function Flashcard({
                   >
                     Вернуться
                   </button>
-                  <button type="button" onClick={onNext} className="cta-button px-3 py-2.5 text-sm">
+                  <button type="button" onClick={handleNext} className="cta-button px-3 py-2.5 text-sm">
                     {nextLabel}
                   </button>
                 </div>
