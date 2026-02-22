@@ -117,7 +117,7 @@ export function Flashcard({
           isFlipped ? '[transform:rotateY(180deg)]' : ''
         }`}
       >
-        <section className="absolute inset-0 flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-soft [backface-visibility:hidden] dark:border-slate-700 dark:bg-[#1e2433]">
+        <section className="glass-card flip-face card-depth absolute inset-0 flex flex-col p-4 [transform:translateZ(0.1px)]">
           {showActions && onEdit && onDelete && (
             <header className="mb-2 flex items-center justify-end gap-2">
               <button
@@ -165,7 +165,7 @@ export function Flashcard({
           </div>
         </section>
 
-        <section className="absolute inset-0 flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-soft [backface-visibility:hidden] [transform:rotateY(180deg)] dark:border-slate-700 dark:bg-[#1e2433]">
+        <section className="glass-card flip-face card-depth absolute inset-0 flex flex-col p-4 [transform:rotateY(180deg)_translateZ(0.1px)]">
           <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-200">{card.answer}</p>
 
           <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-[#222838]">

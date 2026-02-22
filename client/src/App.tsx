@@ -194,7 +194,7 @@ export default function App() {
                   isRevealed ? '[transform:rotateY(180deg)]' : ''
                 }`}
               >
-                <article className="absolute inset-0 flex flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-soft [backface-visibility:hidden] dark:border-slate-700 dark:bg-[#1e2433]">
+                <article className="glass-card flip-face card-depth absolute inset-0 flex flex-col p-6 [transform:translateZ(0.1px)]">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Вопрос</p>
                   <h2 className="mt-4 text-2xl font-semibold leading-tight text-slate-900 dark:text-slate-100">{card.question}</h2>
                   <div className="mt-auto">
@@ -208,7 +208,7 @@ export default function App() {
                   </div>
                 </article>
 
-                <article className="absolute inset-0 flex flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-soft [backface-visibility:hidden] [transform:rotateY(180deg)] dark:border-slate-700 dark:bg-[#1e2433]">
+                <article className="glass-card flip-face card-depth absolute inset-0 flex flex-col p-6 [transform:rotateY(180deg)_translateZ(0.1px)]">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Ответ</p>
                   <p className="mt-4 text-sm leading-relaxed text-slate-700 dark:text-slate-200">{card.answer}</p>
                   <pre className="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-slate-900/95 p-3 font-mono text-xs text-blue-100 dark:border-slate-600">
@@ -248,7 +248,7 @@ export default function App() {
             {features.map((feature) => (
               <article
                 key={feature.title}
-                className="rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-soft transition hover:-translate-y-1 hover:border-brand-300 dark:border-slate-700 dark:bg-[#1d2231]"
+                className="glass-card card-depth p-6 transition hover:-translate-y-1"
               >
                 <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{feature.title}</h4>
                 <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{feature.text}</p>
