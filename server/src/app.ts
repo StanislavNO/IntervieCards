@@ -1,8 +1,9 @@
 import cors from 'cors';
 import express from 'express';
 import { ZodError } from 'zod';
+import { issueAuthToken, parseBearerToken, resolveAuthSecret, verifyAuthToken, verifyTelegramAuthPayload } from './auth.js';
 import type { CardRepository } from './repository.js';
-import { createCardSchema, updateCardSchema } from './validation.js';
+import { createCardSchema, reactCardSchema, telegramAuthSchema, updateCardSchema } from './validation.js';
 
 export function createApp(repository: CardRepository) {
   const app = express();
@@ -13,6 +14,68 @@ export function createApp(repository: CardRepository) {
   app.get('/api/health', (_req, res) => {
     res.json({ ok: true });
   });
+
+  app.post('/api/auth/telegram', async (req, res, next) => {
+    try {
+      const botToken = process.env.TELEGRAM_BOT_TOKEN?.trim();
+      if (!botToken) {
+        return res.status(503).json({ error: 'Telegram auth is not configured on server' });
+      }
+
+      const parsed = telegramAuthSchema.parse(req.body);
+      const user = verifyTelegramAuthPayload(parsed, botToken);
+      if (!user) {
+        return res.status(401).json({ error: 'Invalid Telegram auth payload' });
+      }
+
+      const token = issueAuthToken(user, resolveAuthSecret());
+      return res.json({ token, user });
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  app.get('/api/auth/me', (req, res) => {
+    const token = parseBearerToken(req.header('authorization'));
+    if (!token) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const user = verifyAuthToken(token, resolveAuthSecret());
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    return res.json({ user });
+  });
+
+  app.post('/api/auth/logout', (_req, res) => {
+    res.status(204).send();
+  });
+
+  function requireAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
+    const botTokenConfigured = Boolean(process.env.TELEGRAM_BOT_TOKEN?.trim());
+    if (!botTokenConfigured) {
+      return next();
+    }
+
+    const token = parseBearerToken(req.header('authorization'));
+    if (!token) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const user = verifyAuthToken(token, resolveAuthSecret());
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    return next();
+  }
+
+  function getRouteId(req: express.Request): string {
+    const rawId = req.params.id;
+    return Array.isArray(rawId) ? rawId[0] ?? '' : rawId;
+  }
 
   app.get('/api/cards', async (_req, res, next) => {
     try {
@@ -25,7 +88,7 @@ export function createApp(repository: CardRepository) {
 
   app.get('/api/cards/:id', async (req, res, next) => {
     try {
-      const card = await repository.getById(req.params.id);
+      const card = await repository.getById(getRouteId(req));
       if (!card) {
         return res.status(404).json({ error: 'Card not found' });
       }
@@ -35,7 +98,7 @@ export function createApp(repository: CardRepository) {
     }
   });
 
-  app.post('/api/cards', async (req, res, next) => {
+  app.post('/api/cards', requireAuth, async (req, res, next) => {
     try {
       const parsed = createCardSchema.parse(req.body);
       const card = await repository.create(parsed);
@@ -45,10 +108,10 @@ export function createApp(repository: CardRepository) {
     }
   });
 
-  app.put('/api/cards/:id', async (req, res, next) => {
+  app.put('/api/cards/:id', requireAuth, async (req, res, next) => {
     try {
       const parsed = updateCardSchema.parse(req.body);
-      const card = await repository.update(req.params.id, parsed);
+      const card = await repository.update(getRouteId(req), parsed);
 
       if (!card) {
         return res.status(404).json({ error: 'Card not found' });
@@ -60,14 +123,27 @@ export function createApp(repository: CardRepository) {
     }
   });
 
-  app.delete('/api/cards/:id', async (req, res, next) => {
+  app.delete('/api/cards/:id', requireAuth, async (req, res, next) => {
     try {
-      const removed = await repository.remove(req.params.id);
+      const removed = await repository.remove(getRouteId(req));
       if (!removed) {
         return res.status(404).json({ error: 'Card not found' });
       }
 
       return res.status(204).send();
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  app.post('/api/cards/:id/reaction', requireAuth, async (req, res, next) => {
+    try {
+      const parsed = reactCardSchema.parse(req.body);
+      const summary = await repository.react(getRouteId(req), parsed.value);
+      if (!summary) {
+        return res.status(404).json({ error: 'Card not found' });
+      }
+      return res.json(summary);
     } catch (error) {
       return next(error);
     }

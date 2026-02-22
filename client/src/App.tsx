@@ -1,373 +1,403 @@
 import { useEffect, useMemo, useState } from 'react';
-import { cardsApi } from './api';
-import { CardFormModal } from './components/CardFormModal';
-import { Flashcard } from './components/Flashcard';
-import type { Card, CardPayload } from './types';
+import { authApi } from './api';
+import { clearStoredAuthToken, getStoredAuthToken, getTelegramBotUsername } from './auth';
+import { PracticeWorkspace } from './components/PracticeWorkspace';
+import { TelegramAuthControl } from './components/TelegramAuthControl';
+import type { AuthUser } from './types';
+import { difficultyLabel, tagCategoryClass } from './utils/cardPresentation';
 
-const themeStorageKey = 'unity-flashcards-theme';
-const defaultTagOptions = ['C#', 'Математика', 'Rendering', 'ECS'];
+type Theme = 'light' | 'dark';
+type PracticeView = 'browse' | 'study';
+type AppRoute = { page: 'landing' } | { page: 'practice'; view: PracticeView };
 
-type ModalState = {
-  mode: 'create' | 'edit';
-  card: Card | null;
-} | null;
+type DemoCard = {
+  question: string;
+  answer: string;
+  snippet: string;
+  topic: string;
+  tags: string[];
+  difficulty: 'easy' | 'medium' | 'hard';
+};
 
-type ViewMode = 'browse' | 'study';
+const themeStorageKey = 'unityprep-theme';
 
-function getStoredTheme(): 'light' | 'dark' {
-  const stored = localStorage.getItem(themeStorageKey);
-  return stored === 'dark' ? 'dark' : 'light';
-}
-
-function normalizeTag(tag: string): string {
-  return tag.trim().toLowerCase();
-}
-
-function shuffle<T>(items: T[]): T[] {
-  const copy = [...items];
-  for (let i = copy.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
+const demoCards: DemoCard[] = [
+  {
+    topic: 'Жизненный цикл',
+    difficulty: 'easy',
+    tags: ['C#', 'Architecture'],
+    question: 'В чем разница между Start() и Awake() в Unity?',
+    answer:
+      'Awake вызывается при загрузке объекта и подходит для ранней инициализации. Start вызывается перед первым Update, когда компонент уже активен.',
+    snippet: 'void Awake() { CacheComponents(); }\\nvoid Start() { InitializeGameplay(); }'
+  },
+  {
+    topic: 'Физика',
+    difficulty: 'medium',
+    tags: ['Physics', 'Rendering'],
+    question: 'Почему для физики лучше использовать FixedUpdate()?',
+    answer:
+      'FixedUpdate работает с фиксированным шагом времени. Это дает стабильный расчет сил и столкновений независимо от FPS.',
+    snippet: 'void FixedUpdate() {\\n  rb.AddForce(move * speed, ForceMode.Acceleration);\\n}'
+  },
+  {
+    topic: 'Производительность',
+    difficulty: 'hard',
+    tags: ['Architecture', 'ECS'],
+    question: 'Зачем кэшировать GetComponent() в Unity?',
+    answer:
+      'Повторные вызовы GetComponent в Update стоят дорого. Кэширование ссылки снижает нагрузку на CPU в горячих местах.',
+    snippet: 'private Rigidbody rb;\\nvoid Awake() => rb = GetComponent<Rigidbody>();'
   }
-  return copy;
+];
+
+const features = [
+  {
+    title: 'Подборка по C#',
+    text: 'Целевые вопросы по C#, архитектуре и паттернам, которые реально спрашивают на Unity-интервью.'
+  },
+  {
+    title: 'Специфика Unity',
+    text: 'Практика по жизненному циклу, физике, рендеру, UI и оптимизации прямо в формате Unity-задач.'
+  },
+  {
+    title: 'Отслеживание прогресса',
+    text: 'Отмечай сложные темы, повторяй по тегам и тренируй слабые места перед каждым собеседованием.'
+  }
+];
+
+function detectInitialTheme(): Theme {
+  const stored = localStorage.getItem(themeStorageKey);
+  if (stored === 'light' || stored === 'dark') return stored;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function parseRouteFromLocation(): AppRoute {
+  const params = new URLSearchParams(window.location.search);
+  const page = params.get('page');
+  const view = params.get('view');
+
+  if (page === 'practice') {
+    return { page: 'practice', view: view === 'browse' ? 'browse' : 'study' };
+  }
+
+  return { page: 'landing' };
+}
+
+function writeRoute(route: AppRoute, replace = false): void {
+  const url = new URL(window.location.href);
+
+  if (route.page === 'practice') {
+    url.searchParams.set('page', 'practice');
+    url.searchParams.set('view', route.view);
+  } else {
+    url.searchParams.delete('page');
+    url.searchParams.delete('view');
+  }
+
+  const method = replace ? 'replaceState' : 'pushState';
+  window.history[method]({}, '', `${url.pathname}${url.search}${url.hash}`);
 }
 
 export default function App() {
-  const [cards, setCards] = useState<Card[]>([]);
-  const [query, setQuery] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [modal, setModal] = useState<ModalState>(null);
-  const [theme, setTheme] = useState<'light' | 'dark'>(getStoredTheme);
-  const [viewMode, setViewMode] = useState<ViewMode>('browse');
-
-  const [studySelectedTags, setStudySelectedTags] = useState<string[]>([]);
-  const [studyCurrentCardId, setStudyCurrentCardId] = useState<string | null>(null);
-  const [studyRemainingIds, setStudyRemainingIds] = useState<string[]>([]);
+  const initialRoute = parseRouteFromLocation();
+  const authEnabled = Boolean(getTelegramBotUsername());
+  const [theme, setTheme] = useState<Theme>(detectInitialTheme);
+  const [isRevealed, setIsRevealed] = useState(false);
+  const [cardIndex, setCardIndex] = useState(0);
+  const [isPracticeOpen, setIsPracticeOpen] = useState(initialRoute.page === 'practice');
+  const [practiceInitialView, setPracticeInitialView] = useState<PracticeView>(
+    initialRoute.page === 'practice' ? initialRoute.view : 'study'
+  );
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
+    const root = document.documentElement;
+    root.classList.toggle('dark', theme === 'dark');
+    root.dataset.theme = theme;
     localStorage.setItem(themeStorageKey, theme);
   }, [theme]);
 
   useEffect(() => {
-    void loadCards();
-  }, []);
-
-  const filteredCards = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    if (!normalized) {
-      return cards;
+    if (!authEnabled) {
+      setAuthLoading(false);
+      setAuthUser(null);
+      return;
     }
 
-    return cards.filter((card) => {
-      const content = `${card.question} ${card.answer} ${card.tags.join(' ')}`.toLowerCase();
-      return content.includes(normalized);
-    });
-  }, [cards, query]);
+    const token = getStoredAuthToken();
+    if (!token) {
+      setAuthLoading(false);
+      return;
+    }
 
-  const availableTags = useMemo(() => {
-    const collected = new Set(defaultTagOptions);
-    for (const card of cards) {
-      for (const tag of card.tags) {
-        if (tag.trim()) {
-          collected.add(tag.trim());
+    let cancelled = false;
+    void authApi
+      .me()
+      .then(({ user }) => {
+        if (!cancelled) {
+          setAuthUser(user);
         }
-      }
-    }
-    return Array.from(collected);
-  }, [cards]);
+      })
+      .catch(() => {
+        clearStoredAuthToken();
+        if (!cancelled) {
+          setAuthUser(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setAuthLoading(false);
+        }
+      });
 
-  const studyPool = useMemo(() => {
-    if (studySelectedTags.length === 0) {
-      return [];
-    }
-
-    const selected = new Set(studySelectedTags.map((tag) => normalizeTag(tag)));
-    return cards.filter((card) => card.tags.some((tag) => selected.has(normalizeTag(tag))));
-  }, [cards, studySelectedTags]);
-
-  const studyCurrentCard = useMemo(() => {
-    if (!studyCurrentCardId) {
-      return null;
-    }
-
-    return cards.find((card) => card.id === studyCurrentCardId) ?? null;
-  }, [cards, studyCurrentCardId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [authEnabled]);
 
   useEffect(() => {
-    const poolIdSet = new Set(studyPool.map((card) => card.id));
-
-    setStudyRemainingIds((prev) => {
-      const next = prev.filter((id) => poolIdSet.has(id));
-      if (next.length === prev.length && next.every((id, index) => id === prev[index])) {
-        return prev;
+    const handlePopState = () => {
+      const route = parseRouteFromLocation();
+      if (route.page === 'practice') {
+        setPracticeInitialView(route.view);
+        setIsPracticeOpen(true);
+        return;
       }
-      return next;
-    });
 
-    if (studyCurrentCardId && !poolIdSet.has(studyCurrentCardId)) {
-      setStudyCurrentCardId(null);
-    }
-  }, [studyPool, studyCurrentCardId]);
+      setIsPracticeOpen(false);
+    };
 
-  async function loadCards() {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await cardsApi.getAll();
-      setCards(data);
-    } catch (fetchError) {
-      setError((fetchError as Error).message);
-    } finally {
-      setLoading(false);
-    }
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const card = useMemo(() => demoCards[cardIndex], [cardIndex]);
+
+  function toggleTheme() {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   }
 
-  async function handleCreate(payload: CardPayload) {
-    try {
-      setError(null);
-      const created = await cardsApi.create(payload);
-      setCards((prev) => [created, ...prev]);
-    } catch (submitError) {
-      setError((submitError as Error).message);
-      throw submitError;
-    }
+  function showNextCard() {
+    setIsRevealed(false);
+    setCardIndex((prev) => (prev + 1) % demoCards.length);
   }
 
-  async function handleUpdate(id: string, payload: CardPayload) {
-    try {
-      setError(null);
-      const updated = await cardsApi.update(id, payload);
-      setCards((prev) => prev.map((card) => (card.id === id ? updated : card)));
-    } catch (submitError) {
-      setError((submitError as Error).message);
-      throw submitError;
-    }
+  function openPractice(view: PracticeView) {
+    setPracticeInitialView(view);
+    setIsPracticeOpen(true);
+    writeRoute({ page: 'practice', view });
   }
 
-  async function handleDelete(card: Card) {
-    const confirmed = window.confirm('Удалить эту карточку?');
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      setError(null);
-      await cardsApi.remove(card.id);
-      setCards((prev) => prev.filter((entry) => entry.id !== card.id));
-    } catch (deleteError) {
-      setError((deleteError as Error).message);
-    }
+  function closePractice() {
+    setIsPracticeOpen(false);
+    writeRoute({ page: 'landing' });
   }
 
-  function resetStudySession() {
-    setStudyCurrentCardId(null);
-    setStudyRemainingIds([]);
+  function handlePracticeViewChange(view: PracticeView) {
+    setPracticeInitialView(view);
+    writeRoute({ page: 'practice', view }, true);
   }
 
-  function toggleStudyTag(tag: string) {
-    const normalized = normalizeTag(tag);
-
-    setStudySelectedTags((prev) => {
-      const exists = prev.some((item) => normalizeTag(item) === normalized);
-      if (exists) {
-        return prev.filter((item) => normalizeTag(item) !== normalized);
-      }
-      return [...prev, tag];
-    });
-
-    resetStudySession();
-  }
-
-  function startStudySession() {
-    if (studyPool.length === 0) {
-      return;
-    }
-
-    const shuffledIds = shuffle(studyPool.map((card) => card.id));
-    setStudyCurrentCardId(shuffledIds[0] ?? null);
-    setStudyRemainingIds(shuffledIds.slice(1));
-  }
-
-  function drawNextStudyCard() {
-    if (studyPool.length === 0) {
-      return;
-    }
-
-    if (studyRemainingIds.length > 0) {
-      const [nextId, ...rest] = studyRemainingIds;
-      setStudyCurrentCardId(nextId);
-      setStudyRemainingIds(rest);
-      return;
-    }
-
-    const fallbackIds = studyPool.map((card) => card.id).filter((id) => id !== studyCurrentCardId);
-    if (fallbackIds.length === 0) {
-      return;
-    }
-
-    const shuffled = shuffle(fallbackIds);
-    setStudyCurrentCardId(shuffled[0] ?? null);
-    setStudyRemainingIds(shuffled.slice(1));
+  if (isPracticeOpen) {
+    return (
+      <PracticeWorkspace
+        initialView={practiceInitialView}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        onBack={closePractice}
+        onViewModeChange={handlePracticeViewChange}
+        authUser={authUser}
+        authLoading={authLoading}
+        authEnabled={authEnabled}
+        onAuthChange={setAuthUser}
+      />
+    );
   }
 
   return (
-    <div className="app-shell">
-      <header className="app-header">
-        <div>
-          <h1>Карточки для собеседования Unity-разработчика</h1>
-          <p>Загружено карточек: {cards.length}</p>
-        </div>
+    <div className="relative isolate overflow-x-hidden">
+      <div className="pointer-events-none fixed inset-0 z-0 bg-grid" />
+      <div className="pointer-events-none fixed inset-0 z-0 bg-mesh" />
+      <div className="pointer-events-none fixed inset-0 z-0 bg-particles" />
+      <div className="pointer-events-none fixed inset-x-0 top-[-240px] z-0 h-[560px] bg-[radial-gradient(circle_at_top,_rgba(47,123,255,0.22),_transparent_62%)] dark:bg-[radial-gradient(circle_at_top,_rgba(138,109,255,0.25),_transparent_62%)]" />
 
-        <div className="toolbar">
-          <div className="view-switch">
-            <button
-              type="button"
-              className={viewMode === 'browse' ? 'primary-button' : 'secondary-button'}
-              onClick={() => setViewMode('browse')}
-            >
-              Колода
-            </button>
-            <button
-              type="button"
-              className={viewMode === 'study' ? 'primary-button' : 'secondary-button'}
-              onClick={() => setViewMode('study')}
-            >
-              Тренировка
-            </button>
+      <div className="relative z-10 mx-auto min-h-screen max-w-6xl px-6 pb-20 pt-6 lg:px-10">
+        <nav className="surface-panel mb-14 flex items-center justify-between px-5 py-3">
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 text-lg font-bold text-white">
+              U
+            </div>
+            <div>
+              <p className="text-sm font-semibold tracking-wide text-slate-900 dark:text-slate-100">UnityPrep Cards</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Подготовка к интервью для Unity-разработчиков</p>
+            </div>
           </div>
 
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={() => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))}
-            aria-label="Переключить тему"
-          >
-            {theme === 'light' ? 'Темная тема' : 'Светлая тема'}
-          </button>
-          <button type="button" className="primary-button" onClick={() => setModal({ mode: 'create', card: null })}>
-            + Добавить карточку
-          </button>
-        </div>
-      </header>
+          <div className="hidden items-center gap-8 text-sm font-medium text-slate-600 dark:text-slate-300 md:flex">
+            <a href="#demo" className="transition hover:text-brand-500">
+              Демо
+            </a>
+            <a href="#features" className="transition hover:text-brand-500">
+              Возможности
+            </a>
+            <a href="#start" className="transition hover:text-brand-500">
+              Старт
+            </a>
+          </div>
 
-      {viewMode === 'browse' && (
-        <>
-          <section className="search-row">
-            <input
-              type="search"
-              placeholder="Поиск по вопросу или ответу..."
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              aria-label="Поиск карточек"
-            />
-          </section>
-
-          {loading && <p className="status">Загрузка карточек...</p>}
-          {error && <p className="status error">Не удалось загрузить карточки: {error}</p>}
-
-          {!loading && !error && (
-            <main className="cards-grid">
-              {filteredCards.map((card) => (
-                <Flashcard
-                  key={card.id}
-                  card={card}
-                  onEdit={(selected) => setModal({ mode: 'edit', card: selected })}
-                  onDelete={(selected) => void handleDelete(selected)}
-                />
-              ))}
-            </main>
-          )}
-
-          {!loading && !error && filteredCards.length === 0 && (
-            <p className="status">По вашему запросу ничего не найдено.</p>
-          )}
-        </>
-      )}
-
-      {viewMode === 'study' && (
-        <main className="study-shell">
-          <h2>Режим тренировки по тегам</h2>
-          <p className="status">Выберите теги. Карточки будут показываться по одной случайным образом.</p>
-
-          <section className="study-tags">
-            <div className="tag-options">
-              {availableTags.map((tag) => {
-                const selected = studySelectedTags.some((item) => normalizeTag(item) === normalizeTag(tag));
-                return (
-                  <button
-                    type="button"
-                    key={tag}
-                    className={`tag-chip ${selected ? 'selected' : ''}`}
-                    onClick={() => toggleStudyTag(tag)}
-                  >
-                    {tag}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="study-actions">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="inline-flex shrink-0 items-center gap-3 rounded-full border border-slate-300/80 bg-white px-3 py-1.5 shadow-sm dark:border-slate-600 dark:bg-[#242a39]">
+              <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Тема</span>
               <button
                 type="button"
-                className="primary-button"
-                onClick={startStudySession}
-                disabled={studySelectedTags.length === 0 || studyPool.length === 0}
+                role="switch"
+                aria-checked={theme === 'dark'}
+                onClick={toggleTheme}
+                aria-label="Переключить тему"
+                className="relative h-7 w-14 rounded-full bg-slate-300 transition dark:bg-brand-500/60"
+              >
+                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-700">L</span>
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-100">D</span>
+                <span
+                  className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform duration-300 ${
+                    theme === 'dark' ? 'translate-x-7' : 'translate-x-0.5'
+                  } left-0.5`}
+                />
+              </button>
+            </div>
+            {authEnabled && <TelegramAuthControl user={authUser} loading={authLoading} onUserChange={setAuthUser} />}
+          </div>
+        </nav>
+
+        <section id="demo" className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+          <div>
+            <p className="mb-3 inline-flex rounded-full border border-brand-300/60 bg-brand-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand-600 dark:border-brand-500/40 dark:bg-brand-500/10 dark:text-brand-300">
+              Платформа подготовки к интервью
+            </p>
+            <h1 className="text-balance text-4xl font-black leading-tight text-slate-900 dark:text-slate-100 md:text-6xl">
+              Пройди Unity-интервью уверенно.
+            </h1>
+            <p className="mt-5 max-w-xl text-base leading-relaxed text-slate-600 dark:text-slate-300 md:text-lg">
+              Интерактивные карточки для Unity-разработчиков: C#, движок, оптимизация, архитектура и вопросы,
+              которые чаще всего задают на собеседованиях.
+            </p>
+
+            <div className="mt-8 flex flex-wrap gap-3" id="start">
+              <button
+                type="button"
+                onClick={() => openPractice('study')}
+                className="cta-button px-5 py-3 text-sm"
               >
                 Начать тренировку
               </button>
               <button
                 type="button"
-                className="secondary-button"
-                onClick={drawNextStudyCard}
-                disabled={!studyCurrentCard}
+                onClick={() => openPractice('browse')}
+                className="rounded-xl border border-slate-300 bg-white/75 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-brand-400 hover:text-brand-600 dark:border-slate-600 dark:bg-[#222838]/85 dark:text-slate-200 dark:hover:border-brand-400 dark:hover:text-brand-300"
               >
-                Следующая случайная карточка
-              </button>
-              <button type="button" className="secondary-button" onClick={resetStudySession}>
-                Сбросить сессию
+                Открыть наборы вопросов
               </button>
             </div>
-          </section>
+          </div>
 
-          <p className="status">Подходящих карточек: {studyPool.length}</p>
-          {studyCurrentCard && <p className="status">Осталось в текущем цикле: {studyRemainingIds.length}</p>}
-
-          {!studyCurrentCard && (
-            <p className="status">Нажмите «Начать тренировку», чтобы вытянуть первую карточку.</p>
-          )}
-
-          {studyCurrentCard && <p className="status">Свайп влево или вправо: следующая карточка.</p>}
-
-          {studyCurrentCard && (
-            <div className="study-card-wrap">
-              <Flashcard
-                key={studyCurrentCard.id}
-                card={studyCurrentCard}
-                showActions={false}
-                swipeEnabled
-                onSwipe={() => drawNextStudyCard()}
-              />
+          <div className="mx-auto w-full max-w-lg">
+            <div className="mb-3 flex items-center justify-between text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <span>Демо-карточка</span>
+              <span className="rounded-full border border-slate-300 px-2 py-1 text-[10px] text-slate-600 dark:border-slate-600 dark:text-slate-300">
+                {card.topic}
+              </span>
             </div>
-          )}
-        </main>
-      )}
 
-      {modal && (
-        <CardFormModal
-          mode={modal.mode}
-          card={modal.card}
-          availableTags={availableTags}
-          onClose={() => setModal(null)}
-          onSubmit={(payload) => {
-            if (modal.mode === 'create') {
-              return handleCreate(payload);
-            }
-            return handleUpdate(modal.card!.id, payload);
-          }}
-        />
-      )}
+            <div className="relative h-[370px] w-full [perspective:1400px]">
+              <div
+                className={`relative h-full w-full transition-transform duration-700 [transform-style:preserve-3d] ${
+                  isRevealed ? '[transform:rotateY(180deg)]' : ''
+                }`}
+              >
+                <article
+                  className={`glass-card flip-face card-depth card-lux difficulty-${card.difficulty} absolute inset-0 flex flex-col p-6 [transform:translateZ(0.1px)]`}
+                >
+                  <div className="mb-3 flex items-center justify-between">
+                    <span className="difficulty-badge" data-difficulty={card.difficulty}>
+                      {difficultyLabel(card.difficulty)}
+                    </span>
+                    <span className="rounded-full border border-slate-300 px-2 py-1 text-[10px] text-slate-600 dark:border-slate-600 dark:text-slate-300">
+                      {card.topic}
+                    </span>
+                  </div>
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    {card.tags.map((tag) => (
+                      <span key={tag} className={`tag-chip ${tagCategoryClass(tag)}`}>
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Вопрос</p>
+                  <h2 className="mt-4 text-2xl font-semibold leading-tight text-slate-900 dark:text-slate-100">{card.question}</h2>
+                  <div className="mt-auto">
+                    <button
+                      type="button"
+                      onClick={() => setIsRevealed(true)}
+                      className="cta-button w-full px-4 py-3 text-sm"
+                    >
+                      Показать ответ
+                    </button>
+                  </div>
+                </article>
+
+                <article
+                  className={`glass-card flip-face card-depth card-lux difficulty-${card.difficulty} absolute inset-0 flex flex-col p-6 [transform:rotateY(180deg)_translateZ(0.1px)]`}
+                >
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Ответ</p>
+                  <p className="mt-4 max-w-[68ch] text-sm leading-7 text-slate-700 dark:text-slate-200">{card.answer}</p>
+                  <pre className="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-slate-900/95 p-3 font-mono text-xs text-blue-100 dark:border-slate-600">
+                    <code>{card.snippet}</code>
+                  </pre>
+                  <div className="mt-auto grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setIsRevealed(false)}
+                      className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-brand-400 hover:text-brand-600 dark:border-slate-600 dark:bg-[#242a3a] dark:text-slate-200"
+                    >
+                      Назад
+                    </button>
+                    <button
+                      type="button"
+                      onClick={showNextCard}
+                      className="cta-button px-4 py-2.5 text-sm"
+                    >
+                      Следующий вопрос
+                    </button>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="features" className="mt-24">
+          <div className="mb-10 text-center">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-brand-500">Почему UnityPrep</p>
+            <h3 className="mt-3 text-3xl font-bold text-slate-900 dark:text-slate-100 md:text-4xl">
+              Подготовка к интервью с фокусом на движок
+            </h3>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-3">
+            {features.map((feature) => (
+              <article
+                key={feature.title}
+                className="surface-panel p-6 transition hover:-translate-y-1"
+              >
+                <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{feature.title}</h4>
+                <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{feature.text}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

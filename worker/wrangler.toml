@@ -1,0 +1,9 @@
+name = "unityprep-api"
+main = "src/index.ts"
+compatibility_date = "2026-02-22"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "unityprep-cards-db"
+database_id = "3a331f41-85ff-4c3a-975a-8b6b574fb656"
+migrations_dir = "migrations"

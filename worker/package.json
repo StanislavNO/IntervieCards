@@ -1,0 +1,24 @@
+{
+  "name": "flashcards-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "tsc --noEmit",
+    "deploy": "wrangler deploy",
+    "d1:migrate:local": "wrangler d1 migrations apply unityprep-cards-db --local",
+    "d1:migrate:remote": "wrangler d1 migrations apply unityprep-cards-db --remote",
+    "d1:seed:local": "node scripts/seed-d1.mjs unityprep-cards-db --local",
+    "d1:seed:remote": "node scripts/seed-d1.mjs unityprep-cards-db --remote"
+  },
+  "dependencies": {
+    "hono": "^4.9.8",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260220.0",
+    "typescript": "^5.9.2",
+    "wrangler": "^4.40.3"
+  }
+}
