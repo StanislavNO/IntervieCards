@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
-import type { Card, CardPayload } from '../types';
+import type { Card, CardPayload, Difficulty } from '../types';
 
 type Props = {
   mode: 'create' | 'edit';
@@ -14,6 +14,7 @@ type FormState = {
   answer: string;
   sourcesRaw: string;
   tags: string[];
+  difficulty: Difficulty;
   newTag: string;
 };
 
@@ -45,6 +46,7 @@ export function CardFormModal({ mode, card, availableTags, onClose, onSubmit }: 
     answer: '',
     sourcesRaw: '',
     tags: [],
+    difficulty: 'easy',
     newTag: ''
   });
   const [localTagOptions, setLocalTagOptions] = useState<string[]>([]);
@@ -62,6 +64,7 @@ export function CardFormModal({ mode, card, availableTags, onClose, onSubmit }: 
       answer: card?.answer ?? '',
       sourcesRaw: card?.sources.join('\n') ?? '',
       tags: uniqStrings(initialTags),
+      difficulty: card?.difficulty ?? 'easy',
       newTag: ''
     });
 
@@ -78,7 +81,8 @@ export function CardFormModal({ mode, card, availableTags, onClose, onSubmit }: 
       question: form.question.trim(),
       answer: form.answer.trim(),
       sources: uniqStrings(sources),
-      tags: uniqStrings(form.tags)
+      tags: uniqStrings(form.tags),
+      difficulty: form.difficulty
     };
   }, [form]);
 
@@ -148,7 +152,7 @@ export function CardFormModal({ mode, card, availableTags, onClose, onSubmit }: 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
       <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white shadow-soft dark:border-slate-700 dark:bg-[#1d2231]">
         <header className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-700">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
@@ -240,6 +244,19 @@ export function CardFormModal({ mode, card, availableTags, onClose, onSubmit }: 
               </div>
             )}
           </section>
+
+          <label className="grid gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
+            Уровень сложности
+            <select
+              value={form.difficulty}
+              onChange={(event) => setForm((prev) => ({ ...prev, difficulty: event.target.value as Difficulty }))}
+              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-brand-400 dark:border-slate-600 dark:bg-[#252b3a] dark:text-slate-100"
+            >
+              <option value="easy">Junior</option>
+              <option value="medium">Mid</option>
+              <option value="hard">Senior</option>
+            </select>
+          </label>
 
           <label className="grid gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
             Источники (по одному в строке или через запятую)

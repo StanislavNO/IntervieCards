@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { cardsApi } from '../api';
-import type { Card, CardPayload, CardSort, ReactionValue } from '../types';
+import type { AuthUser, Card, CardPayload, CardSort, ReactionValue } from '../types';
 import { inferDifficulty, tagCategoryClass } from '../utils/cardPresentation';
 import { CardFormModal } from './CardFormModal';
 import { Flashcard } from './Flashcard';
+import { TelegramAuthControl } from './TelegramAuthControl';
 
 const defaultTagOptions = ['C#', 'Математика', 'Rendering', 'Physics', 'Architecture', 'Networking', 'ECS'];
 const masteredStorageKey = 'unityprep-mastered-cards';
@@ -22,6 +23,10 @@ type Props = {
   onToggleTheme: () => void;
   onBack: () => void;
   onViewModeChange?: (view: ViewMode) => void;
+  authUser: AuthUser | null;
+  authLoading: boolean;
+  authEnabled: boolean;
+  onAuthChange: (user: AuthUser | null) => void;
 };
 
 function normalizeTag(tag: string): string {
@@ -72,7 +77,17 @@ function loadMasteredIds(): string[] {
   }
 }
 
-export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack, onViewModeChange }: Props) {
+export function PracticeWorkspace({
+  initialView,
+  theme,
+  onToggleTheme,
+  onBack,
+  onViewModeChange,
+  authUser,
+  authLoading,
+  authEnabled,
+  onAuthChange
+}: Props) {
   const [cards, setCards] = useState<Card[]>([]);
   const [browseSort, setBrowseSort] = useState<CardSort>('new');
   const [query, setQuery] = useState('');
@@ -195,7 +210,24 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack, o
     }
   }
 
+  function ensureAuthorized(actionLabel: string): boolean {
+    if (!authEnabled) {
+      return true;
+    }
+
+    if (authUser) {
+      return true;
+    }
+
+    setError(`Войдите через Telegram, чтобы ${actionLabel}.`);
+    return false;
+  }
+
   async function handleCreate(payload: CardPayload) {
+    if (!ensureAuthorized('добавлять карточки')) {
+      return;
+    }
+
     try {
       setError(null);
       const created = await cardsApi.create(payload);
@@ -207,6 +239,10 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack, o
   }
 
   async function handleUpdate(id: string, payload: CardPayload) {
+    if (!ensureAuthorized('редактировать карточки')) {
+      return;
+    }
+
     try {
       setError(null);
       const updated = await cardsApi.update(id, payload);
@@ -221,6 +257,10 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack, o
   }
 
   async function handleDelete(card: Card) {
+    if (!ensureAuthorized('удалять карточки')) {
+      return;
+    }
+
     const confirmed = window.confirm('Удалить эту карточку?');
     if (!confirmed) {
       return;
@@ -237,6 +277,10 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack, o
   }
 
   async function handleReaction(cardId: string, value: ReactionValue) {
+    if (!ensureAuthorized('оценивать карточки')) {
+      return;
+    }
+
     try {
       const summary = await cardsApi.react(cardId, value);
       setCards((prev) => {
@@ -343,14 +387,9 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack, o
       return;
     }
 
-    const fallbackIds = studyPool.map((card) => card.id).filter((id) => id !== studyCurrentCardId);
-    if (fallbackIds.length === 0) {
-      return;
-    }
-
-    const shuffled = shuffle(fallbackIds);
-    setStudyCurrentCardId(shuffled[0] ?? null);
-    setStudyRemainingIds(shuffled.slice(1));
+    // End session when all cards were shown; do not loop previously seen cards.
+    setStudyCurrentCardId(null);
+    setStudyRemainingIds([]);
   }
 
   const statusText = loading
@@ -360,6 +399,7 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack, o
       : `Карточек в колоде: ${cards.length} (${browseSort === 'popular' ? 'Популярные' : 'Новые'})`;
 
   const masteredCount = cards.filter((card) => masteredSet.has(card.id)).length;
+  const studySessionFinished = studyPool.length > 0 && studyHistoryEntries.length > 0 && !studyCurrentCard;
 
   return (
     <div className="relative isolate min-h-screen overflow-x-hidden">
@@ -412,7 +452,7 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack, o
             </button>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <button
               type="button"
               onClick={onToggleTheme}
@@ -420,11 +460,23 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack, o
             >
               {theme === 'light' ? 'Темная тема' : 'Светлая тема'}
             </button>
-            <button type="button" onClick={() => setModal({ mode: 'create', card: null })} className="cta-button px-4 py-2 text-sm">
+            {authEnabled && <TelegramAuthControl user={authUser} loading={authLoading} onUserChange={onAuthChange} />}
+            <button
+              type="button"
+              onClick={() => setModal({ mode: 'create', card: null })}
+              className="cta-button px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={authEnabled && !authUser}
+            >
               + Добавить карточку
             </button>
           </div>
         </header>
+
+        {authEnabled && !authUser && (
+          <div className="mb-5 rounded-xl border border-amber-300 bg-amber-50/80 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+            Чтобы добавлять, редактировать, удалять и оценивать карточки, войдите через Telegram.
+          </div>
+        )}
 
         {viewMode === 'browse' && (
           <section className="surface-panel p-5">
@@ -519,6 +571,7 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack, o
                     onToggleMastered={(selected) => toggleMastered(selected.id)}
                     onEdit={(selected) => setModal({ mode: 'edit', card: selected })}
                     onDelete={(selected) => void handleDelete(selected)}
+                    showActions={authEnabled ? Boolean(authUser) : true}
                     onReact={(selected, value) => handleReaction(selected.id, value)}
                   />
                 ))}
@@ -643,7 +696,7 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack, o
                         showNextOnQuestion
                         nextLabel="Следующий вопрос"
                         className="mx-auto max-w-2xl study-card-enter"
-                        onReact={(selected, value) => handleReaction(selected.id, value)}
+                        onReact={authEnabled && !authUser ? undefined : (selected, value) => handleReaction(selected.id, value)}
                       />
                     </div>
                   </div>
@@ -691,7 +744,9 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack, o
                 </>
               ) : (
                 <div className="flex h-[420px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50/80 text-center text-sm text-slate-500 dark:border-slate-600 dark:bg-[#252b3a]/70 dark:text-slate-400">
-                  Нажмите «Начать тренировку», чтобы вытянуть первую карточку.
+                  {studySessionFinished
+                    ? 'Карточки в этой тренировке закончились. Повторов не будет, нажмите «Начать тренировку», чтобы запустить новый цикл.'
+                    : 'Нажмите «Начать тренировку», чтобы вытянуть первую карточку.'}
                 </div>
               )}
             </div>

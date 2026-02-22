@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
+import { authApi } from './api';
+import { clearStoredAuthToken, getStoredAuthToken, getTelegramBotUsername } from './auth';
 import { PracticeWorkspace } from './components/PracticeWorkspace';
+import { TelegramAuthControl } from './components/TelegramAuthControl';
+import type { AuthUser } from './types';
 import { difficultyLabel, tagCategoryClass } from './utils/cardPresentation';
 
 type Theme = 'light' | 'dark';
@@ -97,6 +101,7 @@ function writeRoute(route: AppRoute, replace = false): void {
 
 export default function App() {
   const initialRoute = parseRouteFromLocation();
+  const authEnabled = Boolean(getTelegramBotUsername());
   const [theme, setTheme] = useState<Theme>(detectInitialTheme);
   const [isRevealed, setIsRevealed] = useState(false);
   const [cardIndex, setCardIndex] = useState(0);
@@ -104,6 +109,8 @@ export default function App() {
   const [practiceInitialView, setPracticeInitialView] = useState<PracticeView>(
     initialRoute.page === 'practice' ? initialRoute.view : 'study'
   );
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -111,6 +118,44 @@ export default function App() {
     root.dataset.theme = theme;
     localStorage.setItem(themeStorageKey, theme);
   }, [theme]);
+
+  useEffect(() => {
+    if (!authEnabled) {
+      setAuthLoading(false);
+      setAuthUser(null);
+      return;
+    }
+
+    const token = getStoredAuthToken();
+    if (!token) {
+      setAuthLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    void authApi
+      .me()
+      .then(({ user }) => {
+        if (!cancelled) {
+          setAuthUser(user);
+        }
+      })
+      .catch(() => {
+        clearStoredAuthToken();
+        if (!cancelled) {
+          setAuthUser(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setAuthLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authEnabled]);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -163,6 +208,10 @@ export default function App() {
         onToggleTheme={toggleTheme}
         onBack={closePractice}
         onViewModeChange={handlePracticeViewChange}
+        authUser={authUser}
+        authLoading={authLoading}
+        authEnabled={authEnabled}
+        onAuthChange={setAuthUser}
       />
     );
   }
@@ -198,24 +247,27 @@ export default function App() {
             </a>
           </div>
 
-          <div className="inline-flex shrink-0 items-center gap-3 rounded-full border border-slate-300/80 bg-white px-3 py-1.5 shadow-sm dark:border-slate-600 dark:bg-[#242a39]">
-            <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Тема</span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={theme === 'dark'}
-              onClick={toggleTheme}
-              aria-label="Переключить тему"
-              className="relative h-7 w-14 rounded-full bg-slate-300 transition dark:bg-brand-500/60"
-            >
-              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-700">L</span>
-              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-100">D</span>
-              <span
-                className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform duration-300 ${
-                  theme === 'dark' ? 'translate-x-7' : 'translate-x-0.5'
-                } left-0.5`}
-              />
-            </button>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="inline-flex shrink-0 items-center gap-3 rounded-full border border-slate-300/80 bg-white px-3 py-1.5 shadow-sm dark:border-slate-600 dark:bg-[#242a39]">
+              <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Тема</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={theme === 'dark'}
+                onClick={toggleTheme}
+                aria-label="Переключить тему"
+                className="relative h-7 w-14 rounded-full bg-slate-300 transition dark:bg-brand-500/60"
+              >
+                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-700">L</span>
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-100">D</span>
+                <span
+                  className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform duration-300 ${
+                    theme === 'dark' ? 'translate-x-7' : 'translate-x-0.5'
+                  } left-0.5`}
+                />
+              </button>
+            </div>
+            {authEnabled && <TelegramAuthControl user={authUser} loading={authLoading} onUserChange={setAuthUser} />}
           </div>
         </nav>
 

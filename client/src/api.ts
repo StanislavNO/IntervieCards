@@ -1,13 +1,31 @@
-import type { Card, CardPayload, CardSort, ReactionResponse, ReactionValue } from './types';
+import { getStoredAuthToken } from './auth';
+import type { AuthSession, AuthUser, Card, CardPayload, CardSort, ReactionResponse, ReactionValue, TelegramAuthPayload } from './types';
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim().replace(/\/+$/, '') ?? '';
 
-async function request<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
+type RequestOptions = RequestInit & {
+  skipAuth?: boolean;
+};
+
+async function request<T>(input: RequestInfo | URL, init?: RequestOptions): Promise<T> {
+  const { skipAuth = false, ...fetchInit } = init ?? {};
+  const headers = new Headers(fetchInit.headers);
+  const hasBody = typeof fetchInit.body !== 'undefined';
+
+  if (hasBody && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  if (!skipAuth) {
+    const token = getStoredAuthToken();
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+  }
+
   const response = await fetch(input, {
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    ...init
+    ...fetchInit,
+    headers
   });
 
   if (!response.ok) {
@@ -57,4 +75,15 @@ export const cardsApi = {
   remove: (id: string) => request<void>(withBase(`/api/cards/${id}`), { method: 'DELETE' }),
   react: (id: string, value: ReactionValue) =>
     request<ReactionResponse>(withBase(`/api/cards/${id}/reaction`), { method: 'POST', body: JSON.stringify({ value }) })
+};
+
+export const authApi = {
+  loginWithTelegram: (payload: TelegramAuthPayload) =>
+    request<AuthSession>(withBase('/api/auth/telegram'), {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      skipAuth: true
+    }),
+  me: () => request<{ user: AuthUser }>(withBase('/api/auth/me')),
+  logout: () => request<void>(withBase('/api/auth/logout'), { method: 'POST' })
 };

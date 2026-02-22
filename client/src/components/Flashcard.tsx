@@ -25,6 +25,7 @@ type Props = {
   onSwipeProgress?: (offset: number, isDragging: boolean) => void;
   onNext?: () => void;
   showNextOnQuestion?: boolean;
+  showReactionsOnBack?: boolean;
   nextLabel?: string;
   className?: string;
   motionEnabled?: boolean;
@@ -36,7 +37,19 @@ type PointerState = {
   startY: number;
 };
 
+type AnswerBlock =
+  | {
+      type: 'text';
+      text: string;
+    }
+  | {
+      type: 'list';
+      items: string[];
+    };
+
 const swipeThresholdPx = 90;
+const comparisonPattern = /\S\s*(?:—|–|-|:)\s+\S/u;
+const listMarkerPattern = /^[•●▪‣*\-]\s+/u;
 
 function normalizeSource(source: string): string {
   return source.trim();
@@ -44,6 +57,79 @@ function normalizeSource(source: string): string {
 
 function isLink(source: string): boolean {
   return /^https?:\/\//i.test(source);
+}
+
+function normalizeAnswerLine(line: string): string {
+  return line.replace(listMarkerPattern, '').trim();
+}
+
+function toComparisonList(line: string): string[] {
+  const separators = [/\s*;\s*/u, /\s*,\s*/u];
+  for (const separator of separators) {
+    const parts = line.split(separator).map(normalizeAnswerLine).filter(Boolean);
+    if (parts.length >= 2 && parts.every((part) => comparisonPattern.test(part))) {
+      return parts;
+    }
+  }
+  return [];
+}
+
+function buildAnswerBlocks(answer: string): AnswerBlock[] {
+  const paragraphs = answer
+    .split(/\n{2,}/u)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+
+  if (paragraphs.length === 0) {
+    const fallback = answer.trim();
+    return fallback ? [{ type: 'text', text: fallback }] : [];
+  }
+
+  const blocks: AnswerBlock[] = [];
+
+  for (const paragraph of paragraphs) {
+    const lines = paragraph
+      .split(/\n/u)
+      .map(normalizeAnswerLine)
+      .filter(Boolean);
+
+    if (lines.length === 0) {
+      continue;
+    }
+
+    if (lines.length > 1 && lines.every((line) => comparisonPattern.test(line))) {
+      blocks.push({ type: 'list', items: lines });
+      continue;
+    }
+
+    if (lines.length > 1) {
+      for (const line of lines) {
+        const listItems = toComparisonList(line);
+        if (listItems.length >= 2) {
+          blocks.push({ type: 'list', items: listItems });
+        } else {
+          blocks.push({ type: 'text', text: line });
+        }
+      }
+      continue;
+    }
+
+    const [singleLine] = lines;
+    const listItems = toComparisonList(singleLine);
+
+    if (listItems.length >= 2) {
+      blocks.push({ type: 'list', items: listItems });
+    } else {
+      blocks.push({ type: 'text', text: singleLine });
+    }
+  }
+
+  if (blocks.length > 0) {
+    return blocks;
+  }
+
+  const fallback = answer.trim();
+  return fallback ? [{ type: 'text', text: fallback }] : [];
 }
 
 export function Flashcard({
@@ -60,6 +146,7 @@ export function Flashcard({
   onSwipeProgress,
   onNext,
   showNextOnQuestion = false,
+  showReactionsOnBack = false,
   nextLabel = 'Следующий вопрос',
   className = '',
   motionEnabled = true
@@ -72,12 +159,15 @@ export function Flashcard({
   const [tilt, setTilt] = useState({ x: 0, y: 0, px: 50, py: 50 });
   const [showMasteredSweep, setShowMasteredSweep] = useState(false);
   const [reactionPending, setReactionPending] = useState<ReactionValue | null>(null);
+  const [reactionPulse, setReactionPulse] = useState<ReactionValue | null>(null);
+  const [isHovering, setIsHovering] = useState(false);
   const [isNextTransitioning, setIsNextTransitioning] = useState(false);
 
   const pointerStateRef = useRef<PointerState | null>(null);
   const swipeTimeoutRef = useRef<number | null>(null);
   const flipPulseTimeoutRef = useRef<number | null>(null);
   const masteredSweepTimeoutRef = useRef<number | null>(null);
+  const reactionPulseTimeoutRef = useRef<number | null>(null);
   const nextTransitionTimeoutRef = useRef<number | null>(null);
   const prevMasteredRef = useRef(mastered);
 
@@ -95,6 +185,9 @@ export function Flashcard({
       }
       if (masteredSweepTimeoutRef.current !== null) {
         window.clearTimeout(masteredSweepTimeoutRef.current);
+      }
+      if (reactionPulseTimeoutRef.current !== null) {
+        window.clearTimeout(reactionPulseTimeoutRef.current);
       }
       if (nextTransitionTimeoutRef.current !== null) {
         window.clearTimeout(nextTransitionTimeoutRef.current);
@@ -127,10 +220,16 @@ export function Flashcard({
     return classes.join(' ');
   }, [difficulty, mastered, showMasteredSweep]);
 
+  const answerBlocks = useMemo(() => buildAnswerBlocks(card.answer), [card.answer]);
+
   const likesCount = card.likesCount ?? 0;
   const dislikesCount = card.dislikesCount ?? 0;
   const score = card.score ?? likesCount - dislikesCount;
   const userReaction = card.userReaction ?? 0;
+  const secondaryActionButtonClass =
+    'rounded-xl border border-slate-300/85 bg-white/75 px-3 py-3 text-sm font-semibold text-slate-700/90 transition-colors duration-200 hover:border-brand-400 hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-600 dark:bg-[#242a3a] dark:text-slate-200 dark:focus-visible:ring-brand-400 dark:focus-visible:ring-offset-slate-900';
+  const reactionButtonBaseClass =
+    'rounded-full px-2.5 py-1 text-xs font-semibold transition-transform duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-brand-400 dark:focus-visible:ring-offset-slate-900';
 
   const triggerFlipPulse = () => {
     setIsFlipPulse(true);
@@ -172,6 +271,11 @@ export function Flashcard({
     }
 
     try {
+      setReactionPulse(value);
+      if (reactionPulseTimeoutRef.current !== null) {
+        window.clearTimeout(reactionPulseTimeoutRef.current);
+      }
+      reactionPulseTimeoutRef.current = window.setTimeout(() => setReactionPulse(null), 280);
       setReactionPending(value);
       await onReact(card, value);
     } finally {
@@ -314,15 +418,25 @@ export function Flashcard({
       return;
     }
 
+    setIsHovering(false);
     setTilt({ x: 0, y: 0, px: 50, py: 50 });
   };
+
+  const handleMouseEnter = () => {
+    if (!motionEnabled || isDragging) {
+      return;
+    }
+    setIsHovering(true);
+  };
+
+  const hoverScale = !isDragging && !isNextTransitioning && isHovering ? 1.01 : 1;
+  const transitionScale = isNextTransitioning ? 0.985 : hoverScale;
+  const verticalShift = isNextTransitioning ? 78 : 0;
 
   const articleStyle: CSSProperties & Record<'--px' | '--py', string> = {
     transform: `${motionEnabled
       ? `translateX(${swipeOffset}px) rotate(${swipeOffset / 30}deg) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`
-      : `translateX(${swipeOffset}px) rotate(${swipeOffset / 30}deg)`} ${
-      isNextTransitioning ? 'translateY(78px) scale(0.985)' : 'translateY(0) scale(1)'
-    }`,
+      : `translateX(${swipeOffset}px) rotate(${swipeOffset / 30}deg)`} translateY(${verticalShift}px) scale(${transitionScale})`,
     transition: isDragging
       ? 'none'
       : isNextTransitioning
@@ -346,6 +460,7 @@ export function Flashcard({
       onPointerUp={finishSwipe}
       onPointerCancel={handlePointerCancel}
       onLostPointerCapture={handleLostPointerCapture}
+      onMouseEnter={handleMouseEnter}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
     >
@@ -420,10 +535,10 @@ export function Flashcard({
                   aria-label="Поставить лайк"
                   onClick={() => void handleReaction(1)}
                   disabled={reactionPending !== null}
-                  className={`rounded-full px-2.5 py-1 text-xs font-semibold transition ${
+                  className={`${reactionButtonBaseClass} ${reactionPulse === 1 ? 'reaction-bounce' : ''} ${
                     userReaction === 1
                       ? 'bg-emerald-500 text-white'
-                      : 'text-slate-700 hover:bg-emerald-500/15 dark:text-slate-200'
+                      : 'text-slate-600/85 hover:bg-emerald-500/15 hover:text-slate-700 dark:text-slate-300'
                   } ${reactionPending !== null ? 'opacity-70' : ''}`}
                 >
                   👍 {likesCount}
@@ -433,16 +548,16 @@ export function Flashcard({
                   aria-label="Поставить дизлайк"
                   onClick={() => void handleReaction(-1)}
                   disabled={reactionPending !== null}
-                  className={`rounded-full px-2.5 py-1 text-xs font-semibold transition ${
+                  className={`${reactionButtonBaseClass} ${reactionPulse === -1 ? 'reaction-bounce' : ''} ${
                     userReaction === -1
                       ? 'bg-rose-500 text-white'
-                      : 'text-slate-700 hover:bg-rose-500/15 dark:text-slate-200'
+                      : 'text-slate-600/85 hover:bg-rose-500/15 hover:text-slate-700 dark:text-slate-300'
                   } ${reactionPending !== null ? 'opacity-70' : ''}`}
                 >
                   👎 {dislikesCount}
                 </button>
               </div>
-              <span className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+              <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-slate-500/70 dark:text-slate-400/70">
                 Score: {score > 0 ? `+${score}` : score}
               </span>
             </div>
@@ -453,8 +568,8 @@ export function Flashcard({
               isFlipped ? 'translate-y-1 opacity-0' : 'translate-y-0 opacity-100'
             }`}
           >
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Вопрос</p>
-            <h3 className="card-headline text-[1.03rem] font-semibold leading-7 text-slate-900 dark:text-slate-100 md:text-[1.08rem]">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500/70 dark:text-slate-400/70">Вопрос</p>
+            <h3 className="card-headline max-w-[66ch] whitespace-pre-line text-[1.12rem] font-bold leading-8 text-slate-950 dark:text-slate-50 md:text-[1.2rem]">
               {card.question}
             </h3>
           </div>
@@ -462,19 +577,19 @@ export function Flashcard({
           <div className="mt-auto pt-4">
             {onNext && showNextOnQuestion ? (
               <div className="grid grid-cols-2 gap-2">
-                <button type="button" onClick={handleReveal} className="cta-button px-4 py-2.5 text-sm">
+                <button type="button" onClick={handleReveal} className="cta-button px-4 py-3 text-sm">
                   Показать ответ
                 </button>
                 <button
                   type="button"
                   onClick={handleNext}
-                  className="rounded-xl border border-slate-300 bg-white/75 px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-brand-400 hover:text-brand-600 dark:border-slate-600 dark:bg-[#242a3a] dark:text-slate-200"
+                  className={secondaryActionButtonClass}
                 >
                   {nextLabel}
                 </button>
               </div>
             ) : (
-              <button type="button" onClick={handleReveal} className="cta-button w-full px-4 py-2.5 text-sm">
+              <button type="button" onClick={handleReveal} className="cta-button w-full px-4 py-3 text-sm">
                 Показать ответ
               </button>
             )}
@@ -484,16 +599,66 @@ export function Flashcard({
         <section
           className={`${cardClass} card-lux absolute inset-0 flex flex-col p-5 [transform:rotateY(180deg)_translateZ(0.1px)]`}
         >
-          <div
-            className={`flex h-full flex-col transition-all duration-300 ${
-              isFlipped ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
-            }`}
-          >
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Ответ</p>
-            <p className="card-answer text-[0.96rem] leading-7 text-slate-700 dark:text-slate-200">{card.answer}</p>
+          <div className={`flex h-full flex-col ${isFlipped ? 'answer-reveal' : 'translate-y-2 opacity-0'}`}>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500/65 dark:text-slate-400/65">Ответ</p>
+            {showReactionsOnBack && onReact && (
+              <div className="mb-4 flex items-center justify-between gap-2">
+                <div className="inline-flex items-center gap-2 rounded-full border border-slate-300/70 bg-white/70 px-2 py-1 dark:border-slate-600 dark:bg-[#23293a]/85">
+                  <button
+                    type="button"
+                    aria-label="Поставить лайк"
+                    onClick={() => void handleReaction(1)}
+                    disabled={reactionPending !== null}
+                    className={`${reactionButtonBaseClass} ${reactionPulse === 1 ? 'reaction-bounce' : ''} ${
+                      userReaction === 1
+                        ? 'bg-emerald-500 text-white'
+                        : 'text-slate-600/85 hover:bg-emerald-500/15 hover:text-slate-700 dark:text-slate-300'
+                    } ${reactionPending !== null ? 'opacity-70' : ''}`}
+                  >
+                    👍 {likesCount}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Поставить дизлайк"
+                    onClick={() => void handleReaction(-1)}
+                    disabled={reactionPending !== null}
+                    className={`${reactionButtonBaseClass} ${reactionPulse === -1 ? 'reaction-bounce' : ''} ${
+                      userReaction === -1
+                        ? 'bg-rose-500 text-white'
+                        : 'text-slate-600/85 hover:bg-rose-500/15 hover:text-slate-700 dark:text-slate-300'
+                    } ${reactionPending !== null ? 'opacity-70' : ''}`}
+                  >
+                    👎 {dislikesCount}
+                  </button>
+                </div>
+                <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-slate-500/70 dark:text-slate-400/70">
+                  Score: {score > 0 ? `+${score}` : score}
+                </span>
+              </div>
+            )}
+            <div className="space-y-3.5">
+              {answerBlocks.map((block, index) =>
+                block.type === 'list' ? (
+                  <ul
+                    key={`answer-list-${index}`}
+                    className="card-answer list-disc space-y-2 pl-5 text-[0.98rem] leading-7 text-slate-700 dark:text-slate-200"
+                  >
+                    {block.items.map((item, itemIndex) => (
+                      <li key={`${item}-${itemIndex}`} className="marker:text-slate-400 dark:marker:text-slate-500">
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p key={`answer-text-${index}`} className="card-answer whitespace-pre-line text-[0.98rem] leading-7 text-slate-700 dark:text-slate-200">
+                    {block.text}
+                  </p>
+                )
+              )}
+            </div>
 
             <div className="mt-5 space-y-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.13em] text-slate-500 dark:text-slate-400">Источники</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500/70 dark:text-slate-400/70">Источники</p>
               {card.sources.length === 0 ? (
                 <p className="sources-doc text-sm text-slate-500 dark:text-slate-400">Ссылки пока не добавлены</p>
               ) : (
@@ -528,11 +693,11 @@ export function Flashcard({
                   <button
                     type="button"
                     onClick={handleBack}
-                    className="rounded-xl border border-slate-300 bg-white/75 px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-brand-400 hover:text-brand-600 dark:border-slate-600 dark:bg-[#242a3a] dark:text-slate-200"
+                    className={secondaryActionButtonClass}
                   >
                     Вернуться
                   </button>
-                  <button type="button" onClick={handleNext} className="cta-button px-3 py-2.5 text-sm">
+                  <button type="button" onClick={handleNext} className="cta-button px-3 py-3 text-sm">
                     {nextLabel}
                   </button>
                 </div>
@@ -540,7 +705,7 @@ export function Flashcard({
                 <button
                   type="button"
                   onClick={handleBack}
-                  className="w-full rounded-xl border border-slate-300 bg-white/75 px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-brand-400 hover:text-brand-600 dark:border-slate-600 dark:bg-[#242a3a] dark:text-slate-200"
+                  className={`w-full ${secondaryActionButtonClass}`}
                 >
                   Вернуться к вопросу
                 </button>

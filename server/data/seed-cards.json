@@ -6,7 +6,8 @@
       "MonoBehaviour",
       "Lifecycle",
       "C#"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Чем отличаются Awake и Start?",
@@ -15,7 +16,8 @@
       "MonoBehaviour",
       "Lifecycle",
       "C#"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Когда следует использовать FixedUpdate вместо Update?",
@@ -24,7 +26,8 @@
       "MonoBehaviour",
       "Lifecycle",
       "C#"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Что такое LateUpdate и когда он полезен?",
@@ -33,7 +36,8 @@
       "MonoBehaviour",
       "Lifecycle",
       "C#"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Может ли Start быть корутиной?",
@@ -43,7 +47,8 @@
       "Lifecycle",
       "C#",
       "Корутины"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Как правильно уничтожать объекты во время выполнения?",
@@ -52,7 +57,8 @@
       "MonoBehaviour",
       "Lifecycle",
       "C#"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Когда вызывается OnCollisionEnter и что нужно для его срабатывания?",
@@ -61,7 +67,8 @@
       "MonoBehaviour",
       "Lifecycle",
       "C#"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Почему не стоит напрямую изменять Transform у Rigidbody?",
@@ -70,7 +77,8 @@
       "MonoBehaviour",
       "Lifecycle",
       "C#"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Что такое WaitForSeconds и как на него влияет Time.timeScale?",
@@ -81,7 +89,8 @@
       "C#",
       "Корутины",
       "Time"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Что такое корутина в Unity и чем она отличается от многопоточности?",
@@ -92,7 +101,8 @@
       "C#",
       "Корутины",
       "ECS"
-    ]
+    ],
+    "difficulty": "hard"
   },
   {
     "question": "Что такое GameObject в Unity?",
@@ -101,7 +111,8 @@
       "GameObject",
       "Компоненты",
       "C#"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Что такое Component и как компоненты связаны с GameObject?",
@@ -110,7 +121,8 @@
       "GameObject",
       "Компоненты",
       "C#"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Почему у каждого GameObject есть Transform?",
@@ -120,7 +132,8 @@
       "Компоненты",
       "C#",
       "Transform"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Чем отличаются теги (Tags) и слои (Layers), и для чего они нужны?",
@@ -129,7 +142,8 @@
       "GameObject",
       "Компоненты",
       "C#"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "В чем разница между отключением GameObject и отключением Component?",
@@ -138,7 +152,8 @@
       "GameObject",
       "Компоненты",
       "C#"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Как добавить Component к GameObject в скрипте?",
@@ -147,7 +162,8 @@
       "GameObject",
       "Компоненты",
       "C#"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Что такое Prefab и почему они полезны?",
@@ -157,7 +173,8 @@
       "Компоненты",
       "C#",
       "Prefab"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Что такое вложенный Prefab?",
@@ -167,7 +184,8 @@
       "Компоненты",
       "C#",
       "Prefab"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Как создать экземпляр Prefab во время выполнения?",
@@ -177,7 +195,8 @@
       "Компоненты",
       "C#",
       "Prefab"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "В чем разница между GameObject и Prefab?",
@@ -187,7 +206,8 @@
       "Компоненты",
       "C#",
       "Prefab"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Как организовать GameObject иерархически?",
@@ -197,7 +217,8 @@
       "Компоненты",
       "C#",
       "Transform"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "В чем разница между мировым (world) и локальным (local) пространством?",
@@ -207,7 +228,8 @@
       "Компоненты",
       "C#",
       "Transform"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Что такое Scene в Unity?",
@@ -216,7 +238,8 @@
       "Сцены",
       "Assets",
       "Сборка"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Можно ли иметь несколько Scene в одном проекте?",
@@ -225,7 +248,8 @@
       "Сцены",
       "Assets",
       "Сборка"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Что такое окно New Scene и что в нем можно делать?",
@@ -234,7 +258,8 @@
       "Сцены",
       "Assets",
       "Сборка"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Как управлять Scene в Build Settings?",
@@ -243,7 +268,8 @@
       "Сцены",
       "Assets",
       "Сборка"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Какие типы сборок создает Unity?",
@@ -252,7 +278,8 @@
       "Сцены",
       "Assets",
       "Сборка"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Что такое инкрементальный пайплайн сборки?",
@@ -261,7 +288,8 @@
       "Сцены",
       "Assets",
       "Сборка"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Что такое AssetBundle?",
@@ -271,7 +299,8 @@
       "Assets",
       "Сборка",
       "AssetBundle"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Зачем использовать AssetBundle?",
@@ -281,7 +310,8 @@
       "Assets",
       "Сборка",
       "AssetBundle"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Чем AssetBundle отличаются от папки Resources?",
@@ -291,7 +321,8 @@
       "Assets",
       "Сборка",
       "AssetBundle"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Как создавать сборки под конкретные платформы?",
@@ -301,7 +332,8 @@
       "Assets",
       "Сборка",
       "Платформы"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Зачем сжимать AssetBundle?",
@@ -312,7 +344,8 @@
       "Сборка",
       "AssetBundle",
       "Платформы"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Что такое Rigidbody и почему он необходим для физики?",
@@ -321,7 +354,8 @@
       "Physics",
       "Rigidbody",
       "Математика"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Как Unity симулирует физику для Rigidbody?",
@@ -330,7 +364,8 @@
       "Physics",
       "Rigidbody",
       "Математика"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "В чем разница между кинематическими и некинематическими Rigidbody?",
@@ -339,7 +374,8 @@
       "Physics",
       "Rigidbody",
       "Математика"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Когда использовать FixedUpdate для расчетов физики?",
@@ -348,7 +384,8 @@
       "Physics",
       "Rigidbody",
       "Математика"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Чем отличаются коллайдеры и триггеры?",
@@ -358,7 +395,8 @@
       "Rigidbody",
       "Математика",
       "Коллайдеры"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Как отслеживать события столкновений в скрипте?",
@@ -368,7 +406,8 @@
       "Rigidbody",
       "Математика",
       "Коллайдеры"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Как применять силу к Rigidbody?",
@@ -377,7 +416,8 @@
       "Physics",
       "Rigidbody",
       "Математика"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Почему следует избегать масштабирования Rigidbody во время выполнения?",
@@ -386,7 +426,8 @@
       "Physics",
       "Rigidbody",
       "Математика"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Как создать триггерную зону, которая не мешает физике?",
@@ -396,7 +437,8 @@
       "Rigidbody",
       "Математика",
       "Коллайдеры"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Как работает Input.GetAxis?",
@@ -405,7 +447,8 @@
       "Input",
       "Time",
       "C#"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Почему Input.GetAxis нужно умножать на Time.deltaTime?",
@@ -414,7 +457,8 @@
       "Input",
       "Time",
       "C#"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Какие две системы ввода есть в Unity?",
@@ -424,7 +468,8 @@
       "Time",
       "C#",
       "Системы ввода"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Как UI Toolkit обрабатывает ввод?",
@@ -434,7 +479,8 @@
       "Time",
       "C#",
       "Системы ввода"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Как выбрать активную систему ввода?",
@@ -444,7 +490,8 @@
       "Time",
       "C#",
       "Системы ввода"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Для чего нужен компонент EventSystem в Unity UI?",
@@ -454,7 +501,8 @@
       "Time",
       "C#",
       "Системы ввода"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "В чем разница между Input.GetAxis и Input.GetAxisRaw?",
@@ -463,7 +511,8 @@
       "Input",
       "Time",
       "C#"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Как обрабатывать ввод для нескольких игроков?",
@@ -473,7 +522,8 @@
       "Time",
       "C#",
       "Системы ввода"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Что такое Time.deltaTime и почему он важен при обработке ввода?",
@@ -482,7 +532,8 @@
       "Input",
       "Time",
       "C#"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Что такое Canvas в Unity UI?",
@@ -490,7 +541,8 @@
     "tags": [
       "UI",
       "Rendering"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Что произойдет, если создать UI-элемент без Canvas?",
@@ -498,7 +550,8 @@
     "tags": [
       "UI",
       "Rendering"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Какие есть режимы рендеринга Canvas?",
@@ -507,7 +560,8 @@
       "UI",
       "Rendering",
       "Layout"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Как определяется порядок отрисовки UI-элементов?",
@@ -516,7 +570,8 @@
       "UI",
       "Rendering",
       "Layout"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Почему UI-элементы используют RectTransform вместо Transform?",
@@ -525,7 +580,8 @@
       "UI",
       "Rendering",
       "Layout"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "В чем разница между UI Toolkit и Unity UI (uGUI)?",
@@ -534,7 +590,8 @@
       "UI",
       "Rendering",
       "UI Toolkit"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Как сделать UI-элемент адаптивным под разные разрешения?",
@@ -543,7 +600,8 @@
       "UI",
       "Rendering",
       "Layout"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Что такое Raycast Target и почему это важно?",
@@ -551,7 +609,8 @@
     "tags": [
       "UI",
       "Rendering"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Как обрабатывать события ввода на UI-элементах?",
@@ -560,7 +619,8 @@
       "UI",
       "Rendering",
       "UI Toolkit"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Что такое ScriptableObject?",
@@ -570,7 +630,8 @@
       "Данные",
       "Архитектура",
       "C#"
-    ]
+    ],
+    "difficulty": "hard"
   },
   {
     "question": "Когда стоит использовать ScriptableObject вместо MonoBehaviour?",
@@ -580,7 +641,8 @@
       "Данные",
       "Архитектура",
       "C#"
-    ]
+    ],
+    "difficulty": "hard"
   },
   {
     "question": "Как создать asset ScriptableObject?",
@@ -590,7 +652,8 @@
       "Данные",
       "Архитектура",
       "C#"
-    ]
+    ],
+    "difficulty": "hard"
   },
   {
     "question": "Как ScriptableObject улучшают использование памяти по сравнению с MonoBehaviour?",
@@ -600,7 +663,8 @@
       "Данные",
       "Архитектура",
       "C#"
-    ]
+    ],
+    "difficulty": "hard"
   },
   {
     "question": "Могут ли ScriptableObject содержать поведение?",
@@ -610,7 +674,8 @@
       "Данные",
       "Архитектура",
       "C#"
-    ]
+    ],
+    "difficulty": "hard"
   },
   {
     "question": "Как редактировать данные ScriptableObject в Inspector?",
@@ -620,7 +685,8 @@
       "Данные",
       "Архитектура",
       "C#"
-    ]
+    ],
+    "difficulty": "hard"
   },
   {
     "question": "Как запустить корутину?",
@@ -629,7 +695,8 @@
       "Корутины",
       "C#",
       "Performance"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Как остановить выполняющуюся корутину?",
@@ -638,7 +705,8 @@
       "Корутины",
       "C#",
       "Performance"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Почему следует избегать долгих блокирующих задач в корутинах?",
@@ -648,7 +716,8 @@
       "C#",
       "Performance",
       "Память"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Что делает yield return null в корутине?",
@@ -657,7 +726,8 @@
       "Корутины",
       "C#",
       "Performance"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Как выполнять код на каждом фиксированном тике внутри корутины?",
@@ -666,7 +736,8 @@
       "Корутины",
       "C#",
       "Performance"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Почему стоит кэшировать экземпляры WaitForSeconds?",
@@ -676,7 +747,8 @@
       "C#",
       "Performance",
       "Память"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Что такое NavMesh?",
@@ -685,7 +757,8 @@
       "NavMesh",
       "AI",
       "Математика"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Как сгенерировать NavMesh в Unity?",
@@ -694,7 +767,8 @@
       "NavMesh",
       "AI",
       "Математика"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Как агенты используют NavMesh для поиска пути?",
@@ -703,7 +777,8 @@
       "NavMesh",
       "AI",
       "Математика"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Что такое слои NavMesh и off-mesh links?",
@@ -712,7 +787,8 @@
       "NavMesh",
       "AI",
       "Математика"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Как обрабатывать движущиеся препятствия с NavMesh?",
@@ -721,7 +797,8 @@
       "NavMesh",
       "AI",
       "Математика"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Что такое Animation State Machine?",
@@ -730,7 +807,8 @@
       "Animation",
       "Animator",
       "Rendering"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Что такое Animator Controller?",
@@ -739,7 +817,8 @@
       "Animation",
       "Animator",
       "Rendering"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Что такое параметры анимации в Animator?",
@@ -748,7 +827,8 @@
       "Animation",
       "Animator",
       "Rendering"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Что такое переходы анимации?",
@@ -757,7 +837,8 @@
       "Animation",
       "Animator",
       "Rendering"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Что такое blend tree анимации?",
@@ -766,7 +847,8 @@
       "Animation",
       "Animator",
       "Rendering"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Что такое слой анимации?",
@@ -775,7 +857,8 @@
       "Animation",
       "Animator",
       "Rendering"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Почему сравнение Unity-объектов через == null отличается от ReferenceEquals?",
@@ -785,7 +868,8 @@
       "C#",
       "Память",
       "Unity API"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Почему в Unity стоит избегать финализаторов C#?",
@@ -794,7 +878,8 @@
       "Performance",
       "C#",
       "Память"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Какие риски для производительности связаны с частыми выделениями памяти в Unity?",
@@ -803,7 +888,8 @@
       "Performance",
       "C#",
       "Память"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Почему стоит кэшировать компоненты, например результаты GetComponent?",
@@ -812,7 +898,8 @@
       "Performance",
       "C#",
       "Память"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Когда использовать Destroy, а когда DestroyImmediate?",
@@ -822,7 +909,8 @@
       "C#",
       "Память",
       "Unity API"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Почему в производительно-критичном коде стоит избегать LINQ?",
@@ -831,7 +919,8 @@
       "Performance",
       "C#",
       "Память"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Как плавно перемещать Rigidbody без Transform.Translate?",
@@ -840,7 +929,8 @@
       "Physics",
       "Rigidbody",
       "C#"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "В чем разница между Awake и OnEnable?",
@@ -849,7 +939,8 @@
       "MonoBehaviour",
       "Lifecycle",
       "C#"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Какое преимущество Addressables по сравнению с ручным управлением AssetBundle?",
@@ -858,7 +949,8 @@
       "Addressables",
       "AssetBundle",
       "Архитектура"
-    ]
+    ],
+    "difficulty": "hard"
   },
   {
     "question": "Какие преимущества дает development build при тестировании?",
@@ -867,7 +959,8 @@
       "Сборка",
       "Отладка",
       "Performance"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Как уменьшить нагрузку на сборщик мусора, связанную с корутинами?",
@@ -876,7 +969,8 @@
       "Корутины",
       "Performance",
       "Память"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Как централизовать конфигурационные данные, доступные между Scene?",
@@ -885,7 +979,8 @@
       "ScriptableObject",
       "Архитектура",
       "Данные"
-    ]
+    ],
+    "difficulty": "hard"
   },
   {
     "question": "Как Time.timeScale влияет на ожидание корутин, например WaitForSeconds?",
@@ -894,7 +989,8 @@
       "Time",
       "Корутины",
       "C#"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Что такое Time.deltaTime и почему его используют с Input.GetAxis?",
@@ -903,7 +999,8 @@
       "Input",
       "Time",
       "C#"
-    ]
+    ],
+    "difficulty": "easy"
   },
   {
     "question": "Почему следует избегать дорогих операций в Update?",
@@ -911,7 +1008,8 @@
     "tags": [
       "Performance",
       "C#"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Для чего нужно слоение UI внутри Canvas?",
@@ -920,7 +1018,8 @@
       "UI",
       "Rendering",
       "Layout"
-    ]
+    ],
+    "difficulty": "medium"
   },
   {
     "question": "Как реализовать динамическую загрузку Scene или ассетов во время выполнения?",
@@ -929,6 +1028,462 @@
       "Addressables",
       "AssetBundle",
       "Сцены"
-    ]
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question": "Что такое разделение данных и MV-паттерны в Unity?",
+    "answer": "Это разделение Model (данные), View (MonoBehaviour/UI) и логики (Presenter/ViewModel). Цель — убрать бизнес-логику из MonoBehaviour, повысить тестируемость и снизить связанность.",
+    "sources": [],
+    "tags": [
+      "Architecture",
+      "UI"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Разница между MVP и MVC?",
+    "answer": "MVC: View может напрямую читать Model, Controller управляет процессом. MVP: View полностью пассивна и работает через Presenter по интерфейсу. В Unity чаще MVP из-за природы MonoBehaviour.",
+    "sources": [],
+    "tags": [
+      "Architecture",
+      "UI"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Разница между MVP и MVVM?",
+    "answer": "MVVM использует биндинг и реактивность (UniRx/R3). View подписывается на ViewModel. MVP более прямолинейный и проще в дебаге.",
+    "sources": [],
+    "tags": [
+      "Architecture",
+      "UI"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Что такое Core архитектура новой игры?",
+    "answer": "Разделение на Core (чистая логика), Infrastructure (Unity адаптеры), Gameplay, UI, Composition Root. Используется DI, StateMachine, события. Бизнес-логика не зависит от Unity API.",
+    "sources": [],
+    "tags": [
+      "Architecture"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "DI, Singleton, Service Locator — различия?",
+    "answer": "DI — явная передача зависимостей, лучше тестируется, соответствует SOLID. Singleton — глобальная точка доступа, высокая связанность. Service Locator — реестр сервисов, но зависимости скрыты.",
+    "sources": [],
+    "tags": [
+      "Architecture"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Связь DI с принципом D из SOLID?",
+    "answer": "Dependency Inversion Principle: модули зависят от абстракций. DI реализует этот принцип через инъекцию интерфейсов вместо конкретных классов.",
+    "sources": [],
+    "tags": [
+      "Architecture"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Что такое UniRx / R3?",
+    "answer": "Реактивные библиотеки для работы с потоками событий. Позволяют строить подписки вместо Update, управлять потоками и временем. Требуют аккуратного Dispose.",
+    "sources": [],
+    "tags": [
+      "Reactive"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Виды ECS?",
+    "answer": "Object-oriented ECS, Sparse-set ECS (EnTT, Flecs), Archetype ECS (DOTS). Отличаются способом хранения компонентов и группировки сущностей.",
+    "sources": [],
+    "tags": [
+      "ECS"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Что такое Sparse-set ECS?",
+    "answer": "Использует dense и sparse массивы для двойной индексации. Позволяет O(1) добавление/удаление и плотное хранение данных.",
+    "sources": [],
+    "tags": [
+      "ECS"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Что такое архетипный ECS?",
+    "answer": "Сущности группируются по набору компонентов (архетипу). Компоненты хранятся плотными массивами. Высокая cache-friendly производительность.",
+    "sources": [],
+    "tags": [
+      "ECS"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Почему не LeoEcs?",
+    "answer": "Меньше tooling и контроля над памятью, слабее масштабируется по сравнению с DOTS. Подходит для небольших проектов.",
+    "sources": [],
+    "tags": [
+      "ECS"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Как очищаются сущности в ECS?",
+    "answer": "Обычно помечаются на удаление и очищаются в конце фрейма. Компоненты удаляются из плотных массивов или возвращаются в пул.",
+    "sources": [],
+    "tags": [
+      "ECS"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Что такое мультимиры в ECS?",
+    "answer": "Несколько миров (Gameplay, UI, StateMachine). Позволяют разделять ответственность и изолировать логику.",
+    "sources": [],
+    "tags": [
+      "ECS"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Что оставить в ООП, а что в ECS?",
+    "answer": "В ECS — данные и массовые вычисления. В ООП — сервисы, инфраструктура, UI, интеграции.",
+    "sources": [],
+    "tags": [
+      "ECS",
+      "Architecture"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Как устроен List<T>?",
+    "answer": "Динамический массив. При превышении capacity создаётся новый массив большего размера и элементы копируются.",
+    "sources": [],
+    "tags": [
+      "Collections"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question": "Как работает Remove в List и как оптимизировать?",
+    "answer": "Remove сдвигает элементы — O(n). Если порядок не важен, можно заменить удаляемый элемент последним и уменьшить Count — O(1).",
+    "sources": [],
+    "tags": [
+      "Collections"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question": "List vs Array со структурами?",
+    "answer": "Array фиксированного размера, без аллокаций на resize. List добавляет overhead при расширении. Для struct массив более предсказуем по памяти.",
+    "sources": [],
+    "tags": [
+      "Memory",
+      "Collections"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Как работает Dictionary?",
+    "answer": "Хеширование ключа → bucket → обработка коллизий. Resize при превышении load factor. Средняя сложность O(1).",
+    "sources": [],
+    "tags": [
+      "Collections"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question": "Как передать ValueType по ссылке?",
+    "answer": "Через ref, in, out. Можно использовать unsafe pointer. Это избегает копирования структуры.",
+    "sources": [],
+    "tags": [
+      "C# Memory"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Как избежать боксинга?",
+    "answer": "Не приводить struct к object или интерфейсу. Использовать generics с where T : struct.",
+    "sources": [],
+    "tags": [
+      "C# Memory"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Как хранить миллиард точек?",
+    "answer": "Использовать struct + массив или NativeArray. Нужно оценить доступную память, необходимость изменения размера и стратегию итерации.",
+    "sources": [],
+    "tags": [
+      "Memory",
+      "Performance"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Как работает GC в .NET?",
+    "answer": "3 поколения (0,1,2), компактизация памяти, Large Object Heap. Молодые объекты очищаются чаще.",
+    "sources": [],
+    "tags": [
+      "GC"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Как работает GC в Unity?",
+    "answer": "Однопоколенный GC, без полноценной компактизации. Есть incremental режим. Возможны фризы при полной сборке.",
+    "sources": [],
+    "tags": [
+      "GC",
+      "Unity"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Что такое асинхронность?",
+    "answer": "Неблокирующее выполнение задач. Не равна многопоточности. Может работать в одном потоке через state machine.",
+    "sources": [],
+    "tags": [
+      "Async"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Асинхронность vs многопоточность?",
+    "answer": "Асинхронность — неблокирующая модель. Многопоточность — параллельное выполнение на нескольких потоках.",
+    "sources": [],
+    "tags": [
+      "Async"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Может ли быть несколько потоков на одном ядре?",
+    "answer": "Да, через планировщик ОС. Потоки получают квант времени и переключаются.",
+    "sources": [],
+    "tags": [
+      "Threads"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "UniTask vs Task?",
+    "answer": "UniTask оптимизирован под Unity, избегает аллокаций. Task использует стандартный .NET механизм.",
+    "sources": [],
+    "tags": [
+      "Async",
+      "Unity"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Что такое ValueTask?",
+    "answer": "Оптимизированная версия Task для уменьшения аллокаций, может завершаться синхронно.",
+    "sources": [],
+    "tags": [
+      "Async"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Почему нельзя запускать корутину из внешнего потока?",
+    "answer": "Unity API не потокобезопасен. Корутины работают в главном потоке.",
+    "sources": [],
+    "tags": [
+      "Unity",
+      "Threads"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Обязательно ли Task.Run создаёт новый поток?",
+    "answer": "Нет, он использует ThreadPool. Поток может быть переиспользован.",
+    "sources": [],
+    "tags": [
+      "Threads"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Что такое ThreadPool?",
+    "answer": "Пул рабочих потоков, управляемый CLR. Используется для фоновых задач.",
+    "sources": [],
+    "tags": [
+      "Threads"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Что делает ConfigureAwait(false)?",
+    "answer": "Не возвращает выполнение в исходный SynchronizationContext.",
+    "sources": [],
+    "tags": [
+      "Async"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "async void vs async Task?",
+    "answer": "async void не позволяет обработать исключения и await. Используется только для event handler.",
+    "sources": [],
+    "tags": [
+      "Async"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Что такое SynchronizationContext?",
+    "answer": "Механизм возврата выполнения в определённый поток (например, Unity main thread).",
+    "sources": [],
+    "tags": [
+      "Async"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Task.WhenAll vs WhenAny?",
+    "answer": "WhenAll ждёт завершения всех задач. WhenAny возвращает первую завершившуюся, но остальные продолжают работать.",
+    "sources": [],
+    "tags": [
+      "Async"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Что такое атомарные операции?",
+    "answer": "Операции, выполняющиеся неделимо. Например Interlocked.Increment.",
+    "sources": [],
+    "tags": [
+      "Concurrency"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "volatile и Interlocked — разница?",
+    "answer": "volatile запрещает оптимизации кэша, но не гарантирует атомарность. Interlocked гарантирует атомарную операцию.",
+    "sources": [],
+    "tags": [
+      "Concurrency"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Почему List не потокобезопасен?",
+    "answer": "Нет синхронизации при изменении массива. Для потокобезопасности использовать ConcurrentCollection или lock.",
+    "sources": [],
+    "tags": [
+      "Concurrency"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Как работает потокобезопасная очередь?",
+    "answer": "Использует блокировки или lock-free алгоритмы с атомарными операциями.",
+    "sources": [],
+    "tags": [
+      "Concurrency"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Что такое SpinLock / SpinWait?",
+    "answer": "Активное ожидание без перехода в состояние сна. Эффективно при коротких блокировках.",
+    "sources": [],
+    "tags": [
+      "Concurrency"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Как решать гонку потоков?",
+    "answer": "Использовать lock, атомарные операции, immutable данные или разделение ответственности.",
+    "sources": [],
+    "tags": [
+      "Concurrency"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Как параллельно загружать N файлов и считать прогресс?",
+    "answer": "Запустить задачи через Task.WhenAll, использовать потокобезопасный счётчик (Interlocked), прогресс отправлять в главный поток.",
+    "sources": [],
+    "tags": [
+      "Async",
+      "Threads"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Что такое Addressables?",
+    "answer": "Система управления ресурсами поверх AssetBundle. Управляет зависимостями, загрузкой и выгрузкой.",
+    "sources": [],
+    "tags": [
+      "Unity",
+      "Assets"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question": "Как резолвятся зависимости в AssetBundle?",
+    "answer": "Если бандл зависит от другого, Unity автоматически загрузит зависимый бандл при обращении к ресурсу.",
+    "sources": [],
+    "tags": [
+      "Unity",
+      "Assets"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question": "Если модель в одном бандле, текстура в другом — что будет?",
+    "answer": "При загрузке модели автоматически подгрузится бандл с текстурой, если зависимость указана.",
+    "sources": [],
+    "tags": [
+      "Unity",
+      "Assets"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question": "Destroy vs Release?",
+    "answer": "Destroy удаляет объект сцены. Release уменьшает reference count Addressables. Ресурс выгружается при нуле ссылок.",
+    "sources": [],
+    "tags": [
+      "Unity",
+      "Assets"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question": "Что такое сетевой транспорт?",
+    "answer": "Низкоуровневый слой передачи данных (UDP, TCP, WebSocket). Поверх него строятся сетевые фреймворки.",
+    "sources": [],
+    "tags": [
+      "Networking"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Что такое конкурентность?",
+    "answer": "Ситуация, когда несколько потоков обращаются к общему ресурсу.",
+    "sources": [],
+    "tags": [
+      "Concurrency"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Pinned объекты в GC?",
+    "answer": "Объекты, которые нельзя перемещать. Могут вызывать фрагментацию памяти.",
+    "sources": [],
+    "tags": [
+      "GC"
+    ],
+    "difficulty": "hard"
   }
 ]
