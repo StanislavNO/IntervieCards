@@ -4,3 +4,5 @@ coverage
 .DS_Store
 server/data/cards.json
 client/.env.local
+
+worker/.wrangler
