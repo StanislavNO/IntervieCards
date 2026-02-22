@@ -1,0 +1,934 @@
+[
+  {
+    "question": "Каково назначение MonoBehaviour в Unity?",
+    "answer": "MonoBehaviour — это базовый класс для скриптов, которые привязываются к GameObject и участвуют в жизненном цикле событий Unity.",
+    "tags": [
+      "MonoBehaviour",
+      "Lifecycle",
+      "C#"
+    ]
+  },
+  {
+    "question": "Чем отличаются Awake и Start?",
+    "answer": "Awake вызывается при загрузке объекта, а Start — перед первым Update, когда объект уже включен.",
+    "tags": [
+      "MonoBehaviour",
+      "Lifecycle",
+      "C#"
+    ]
+  },
+  {
+    "question": "Когда следует использовать FixedUpdate вместо Update?",
+    "answer": "FixedUpdate используйте для физики и сил, а Update — для логики по кадрам и обработки ввода.",
+    "tags": [
+      "MonoBehaviour",
+      "Lifecycle",
+      "C#"
+    ]
+  },
+  {
+    "question": "Что такое LateUpdate и когда он полезен?",
+    "answer": "LateUpdate вызывается после всех Update и подходит для зависимой логики, например следования камеры.",
+    "tags": [
+      "MonoBehaviour",
+      "Lifecycle",
+      "C#"
+    ]
+  },
+  {
+    "question": "Может ли Start быть корутиной?",
+    "answer": "Да, Start может возвращать IEnumerator и использовать yield для поэтапной инициализации.",
+    "tags": [
+      "MonoBehaviour",
+      "Lifecycle",
+      "C#",
+      "Корутины"
+    ]
+  },
+  {
+    "question": "Как правильно уничтожать объекты во время выполнения?",
+    "answer": "Для удаления в рантайме используйте Destroy(obj), а для временного отключения без удаления — SetActive(false).",
+    "tags": [
+      "MonoBehaviour",
+      "Lifecycle",
+      "C#"
+    ]
+  },
+  {
+    "question": "Когда вызывается OnCollisionEnter и что нужно для его срабатывания?",
+    "answer": "OnCollisionEnter срабатывает при начале контакта коллайдеров, если хотя бы у одного есть некинематический Rigidbody.",
+    "tags": [
+      "MonoBehaviour",
+      "Lifecycle",
+      "C#"
+    ]
+  },
+  {
+    "question": "Почему не стоит напрямую изменять Transform у Rigidbody?",
+    "answer": "Прямое изменение Transform обходит физический движок и может вызвать нестабильные столкновения и движение.",
+    "tags": [
+      "MonoBehaviour",
+      "Lifecycle",
+      "C#"
+    ]
+  },
+  {
+    "question": "Что такое WaitForSeconds и как на него влияет Time.timeScale?",
+    "answer": "WaitForSeconds приостанавливает корутину в масштабируемом времени, поэтому длительность умножается на Time.timeScale.",
+    "tags": [
+      "MonoBehaviour",
+      "Lifecycle",
+      "C#",
+      "Корутины",
+      "Time"
+    ]
+  },
+  {
+    "question": "Что такое корутина в Unity и чем она отличается от многопоточности?",
+    "answer": "Корутина — это выполнение логики по кадрам на главном потоке; это не настоящая параллельная многопоточность.",
+    "tags": [
+      "MonoBehaviour",
+      "Lifecycle",
+      "C#",
+      "Корутины",
+      "ECS"
+    ]
+  },
+  {
+    "question": "Что такое GameObject в Unity?",
+    "answer": "GameObject — базовый объект сцены, а поведение он получает через прикрепленные компоненты.",
+    "tags": [
+      "GameObject",
+      "Компоненты",
+      "C#"
+    ]
+  },
+  {
+    "question": "Что такое Component и как компоненты связаны с GameObject?",
+    "answer": "Компоненты — это модульные блоки данных и поведения, которые добавляются к GameObject.",
+    "tags": [
+      "GameObject",
+      "Компоненты",
+      "C#"
+    ]
+  },
+  {
+    "question": "Почему у каждого GameObject есть Transform?",
+    "answer": "Transform хранит позицию, вращение и масштаб и обязателен для размещения объекта в сцене.",
+    "tags": [
+      "GameObject",
+      "Компоненты",
+      "C#",
+      "Transform"
+    ]
+  },
+  {
+    "question": "Чем отличаются теги (Tags) и слои (Layers), и для чего они нужны?",
+    "answer": "Tags служат для идентификации объектов в коде, а Layers — для фильтрации рендера, света и физики.",
+    "tags": [
+      "GameObject",
+      "Компоненты",
+      "C#"
+    ]
+  },
+  {
+    "question": "В чем разница между отключением GameObject и отключением Component?",
+    "answer": "SetActive(false) отключает объект и его дочерние элементы, а отключение Component останавливает только этот компонент.",
+    "tags": [
+      "GameObject",
+      "Компоненты",
+      "C#"
+    ]
+  },
+  {
+    "question": "Как добавить Component к GameObject в скрипте?",
+    "answer": "Вызовите gameObject.AddComponent<YourType>(), чтобы создать и добавить компонент во время выполнения.",
+    "tags": [
+      "GameObject",
+      "Компоненты",
+      "C#"
+    ]
+  },
+  {
+    "question": "Что такое Prefab и почему они полезны?",
+    "answer": "Prefab — это переиспользуемый шаблон настроенного GameObject для быстрого создания экземпляров и единых обновлений.",
+    "tags": [
+      "GameObject",
+      "Компоненты",
+      "C#",
+      "Prefab"
+    ]
+  },
+  {
+    "question": "Что такое вложенный Prefab?",
+    "answer": "Вложенный Prefab — это Prefab внутри другого Prefab, удобно для сборки сложных объектов из частей.",
+    "tags": [
+      "GameObject",
+      "Компоненты",
+      "C#",
+      "Prefab"
+    ]
+  },
+  {
+    "question": "Как создать экземпляр Prefab во время выполнения?",
+    "answer": "Используйте Instantiate(prefab, position, rotation), чтобы создать экземпляр в рантайме.",
+    "tags": [
+      "GameObject",
+      "Компоненты",
+      "C#",
+      "Prefab"
+    ]
+  },
+  {
+    "question": "В чем разница между GameObject и Prefab?",
+    "answer": "GameObject — экземпляр в сцене, Prefab — asset-шаблон для создания таких экземпляров.",
+    "tags": [
+      "GameObject",
+      "Компоненты",
+      "C#",
+      "Prefab"
+    ]
+  },
+  {
+    "question": "Как организовать GameObject иерархически?",
+    "answer": "Используйте связи родитель-потомок в Transform, где локальные трансформации потомка зависят от родителя.",
+    "tags": [
+      "GameObject",
+      "Компоненты",
+      "C#",
+      "Transform"
+    ]
+  },
+  {
+    "question": "В чем разница между мировым (world) и локальным (local) пространством?",
+    "answer": "World space считается от начала сцены, а local space — от Transform родителя.",
+    "tags": [
+      "GameObject",
+      "Компоненты",
+      "C#",
+      "Transform"
+    ]
+  },
+  {
+    "question": "Что такое Scene в Unity?",
+    "answer": "Scene — это asset, содержащий часть игры: уровень, меню или окружение.",
+    "tags": [
+      "Сцены",
+      "Assets",
+      "Сборка"
+    ]
+  },
+  {
+    "question": "Можно ли иметь несколько Scene в одном проекте?",
+    "answer": "Да, в проекте Unity обычно используется много сцен, включая одновременную работу с несколькими сценами.",
+    "tags": [
+      "Сцены",
+      "Assets",
+      "Сборка"
+    ]
+  },
+  {
+    "question": "Что такое окно New Scene и что в нем можно делать?",
+    "answer": "Окно New Scene позволяет создавать сцены из шаблонов, управлять шаблонами и работать в multi-scene сценариях.",
+    "tags": [
+      "Сцены",
+      "Assets",
+      "Сборка"
+    ]
+  },
+  {
+    "question": "Как управлять Scene в Build Settings?",
+    "answer": "В Scenes In Build можно добавлять, удалять, включать, отключать и менять порядок сцен в сборке.",
+    "tags": [
+      "Сцены",
+      "Assets",
+      "Сборка"
+    ]
+  },
+  {
+    "question": "Какие типы сборок создает Unity?",
+    "answer": "Unity поддерживает release-сборки для релиза и development-сборки для отладки и профилирования.",
+    "tags": [
+      "Сцены",
+      "Assets",
+      "Сборка"
+    ]
+  },
+  {
+    "question": "Что такое инкрементальный пайплайн сборки?",
+    "answer": "Инкрементальная сборка пересобирает только изменившиеся артефакты, ускоряя итерации.",
+    "tags": [
+      "Сцены",
+      "Assets",
+      "Сборка"
+    ]
+  },
+  {
+    "question": "Что такое AssetBundle?",
+    "answer": "AssetBundle — платформозависимый архив ассетов, который можно подгружать динамически в рантайме.",
+    "tags": [
+      "Сцены",
+      "Assets",
+      "Сборка",
+      "AssetBundle"
+    ]
+  },
+  {
+    "question": "Зачем использовать AssetBundle?",
+    "answer": "AssetBundle уменьшают начальный размер сборки и позволяют подгружать контент по требованию.",
+    "tags": [
+      "Сцены",
+      "Assets",
+      "Сборка",
+      "AssetBundle"
+    ]
+  },
+  {
+    "question": "Чем AssetBundle отличаются от папки Resources?",
+    "answer": "Resources включаются в основной билд, а AssetBundle хранятся отдельно и загружаются по мере необходимости.",
+    "tags": [
+      "Сцены",
+      "Assets",
+      "Сборка",
+      "AssetBundle"
+    ]
+  },
+  {
+    "question": "Как создавать сборки под конкретные платформы?",
+    "answer": "В Build Settings выберите целевую платформу и переключитесь на нее, чтобы Unity переимпортировала нужные ассеты.",
+    "tags": [
+      "Сцены",
+      "Assets",
+      "Сборка",
+      "Платформы"
+    ]
+  },
+  {
+    "question": "Зачем сжимать AssetBundle?",
+    "answer": "Сжатие уменьшает размер загрузки: LZ4 быстрее в использовании, LZMA дает более высокую степень сжатия.",
+    "tags": [
+      "Сцены",
+      "Assets",
+      "Сборка",
+      "AssetBundle",
+      "Платформы"
+    ]
+  },
+  {
+    "question": "Что такое Rigidbody и почему он необходим для физики?",
+    "answer": "Rigidbody позволяет объекту участвовать в физике: реагировать на силы, гравитацию и столкновения.",
+    "tags": [
+      "Physics",
+      "Rigidbody",
+      "Математика"
+    ]
+  },
+  {
+    "question": "Как Unity симулирует физику для Rigidbody?",
+    "answer": "Физический движок обновляет скорость и столкновения на основе параметров Rigidbody и приложенных сил.",
+    "tags": [
+      "Physics",
+      "Rigidbody",
+      "Математика"
+    ]
+  },
+  {
+    "question": "В чем разница между кинематическими и некинематическими Rigidbody?",
+    "answer": "Динамические Rigidbody управляются физикой, а кинематические двигаются скриптом и игнорируют силы.",
+    "tags": [
+      "Physics",
+      "Rigidbody",
+      "Математика"
+    ]
+  },
+  {
+    "question": "Когда использовать FixedUpdate для расчетов физики?",
+    "answer": "Применяйте силы и физическую логику в FixedUpdate для стабильной симуляции с фиксированным шагом.",
+    "tags": [
+      "Physics",
+      "Rigidbody",
+      "Математика"
+    ]
+  },
+  {
+    "question": "Чем отличаются коллайдеры и триггеры?",
+    "answer": "Обычные коллайдеры физически блокируют, а триггеры только отслеживают пересечения без блокировки.",
+    "tags": [
+      "Physics",
+      "Rigidbody",
+      "Математика",
+      "Коллайдеры"
+    ]
+  },
+  {
+    "question": "Как отслеживать события столкновений в скрипте?",
+    "answer": "Реализуйте OnCollisionEnter(Collision c); нужен как минимум один некинематический Rigidbody у участвующих объектов.",
+    "tags": [
+      "Physics",
+      "Rigidbody",
+      "Математика",
+      "Коллайдеры"
+    ]
+  },
+  {
+    "question": "Как применять силу к Rigidbody?",
+    "answer": "Используйте AddForce или AddTorque, обычно в FixedUpdate, с подходящим ForceMode.",
+    "tags": [
+      "Physics",
+      "Rigidbody",
+      "Математика"
+    ]
+  },
+  {
+    "question": "Почему следует избегать масштабирования Rigidbody во время выполнения?",
+    "answer": "Масштабирование в рантайме может искажать коллайдеры и вызывать нестабильные или непредсказуемые столкновения.",
+    "tags": [
+      "Physics",
+      "Rigidbody",
+      "Математика"
+    ]
+  },
+  {
+    "question": "Как создать триггерную зону, которая не мешает физике?",
+    "answer": "Добавьте коллайдер и установите isTrigger=true — он будет вызывать события триггера без физической блокировки.",
+    "tags": [
+      "Physics",
+      "Rigidbody",
+      "Математика",
+      "Коллайдеры"
+    ]
+  },
+  {
+    "question": "Как работает Input.GetAxis?",
+    "answer": "Input.GetAxis возвращает сглаженное значение оси в диапазоне от -1 до 1 и не зависит от FPS.",
+    "tags": [
+      "Input",
+      "Time",
+      "C#"
+    ]
+  },
+  {
+    "question": "Почему Input.GetAxis нужно умножать на Time.deltaTime?",
+    "answer": "deltaTime переводит ввод из «за кадр» в «за секунду», сохраняя одинаковую скорость движения при разном FPS.",
+    "tags": [
+      "Input",
+      "Time",
+      "C#"
+    ]
+  },
+  {
+    "question": "Какие две системы ввода есть в Unity?",
+    "answer": "Unity поддерживает старую систему Input Manager и новую систему Input System Package.",
+    "tags": [
+      "Input",
+      "Time",
+      "C#",
+      "Системы ввода"
+    ]
+  },
+  {
+    "question": "Как UI Toolkit обрабатывает ввод?",
+    "answer": "UI Toolkit использует event system для маршрутизации событий ввода в активные UI-панели в Play Mode.",
+    "tags": [
+      "Input",
+      "Time",
+      "C#",
+      "Системы ввода"
+    ]
+  },
+  {
+    "question": "Как выбрать активную систему ввода?",
+    "answer": "Активная система ввода задается в Player Settings через Active Input Handling: Input Manager, Input System или Both.",
+    "tags": [
+      "Input",
+      "Time",
+      "C#",
+      "Системы ввода"
+    ]
+  },
+  {
+    "question": "Для чего нужен компонент EventSystem в Unity UI?",
+    "answer": "EventSystem обрабатывает ввод с мыши, клавиатуры и геймпада и отправляет события UI-элементам.",
+    "tags": [
+      "Input",
+      "Time",
+      "C#",
+      "Системы ввода"
+    ]
+  },
+  {
+    "question": "В чем разница между Input.GetAxis и Input.GetAxisRaw?",
+    "answer": "GetAxis дает сглаженное значение, а GetAxisRaw возвращает мгновенное несглаженное цифровое значение.",
+    "tags": [
+      "Input",
+      "Time",
+      "C#"
+    ]
+  },
+  {
+    "question": "Как обрабатывать ввод для нескольких игроков?",
+    "answer": "Используйте PlayerInput с отдельными схемами управления и устройствами для каждого игрока.",
+    "tags": [
+      "Input",
+      "Time",
+      "C#",
+      "Системы ввода"
+    ]
+  },
+  {
+    "question": "Что такое Time.deltaTime и почему он важен при обработке ввода?",
+    "answer": "Time.deltaTime — время с прошлого кадра; оно используется для нормализации скорости движения между разными FPS.",
+    "tags": [
+      "Input",
+      "Time",
+      "C#"
+    ]
+  },
+  {
+    "question": "Что такое Canvas в Unity UI?",
+    "answer": "Canvas — корневой контейнер, в котором должны находиться все элементы uGUI для корректной отрисовки.",
+    "tags": [
+      "UI",
+      "Rendering"
+    ]
+  },
+  {
+    "question": "Что произойдет, если создать UI-элемент без Canvas?",
+    "answer": "Unity автоматически создаст Canvas и поместит новый UI-элемент внутрь него.",
+    "tags": [
+      "UI",
+      "Rendering"
+    ]
+  },
+  {
+    "question": "Какие есть режимы рендеринга Canvas?",
+    "answer": "Режимы Canvas: Screen Space - Overlay, Screen Space - Camera и World Space.",
+    "tags": [
+      "UI",
+      "Rendering",
+      "Layout"
+    ]
+  },
+  {
+    "question": "Как определяется порядок отрисовки UI-элементов?",
+    "answer": "Порядок отрисовки UI определяется порядком объектов в иерархии внутри Canvas.",
+    "tags": [
+      "UI",
+      "Rendering",
+      "Layout"
+    ]
+  },
+  {
+    "question": "Почему UI-элементы используют RectTransform вместо Transform?",
+    "answer": "RectTransform добавляет якоря, pivot и размеры, что нужно для адаптивной 2D-верстки интерфейса.",
+    "tags": [
+      "UI",
+      "Rendering",
+      "Layout"
+    ]
+  },
+  {
+    "question": "В чем разница между UI Toolkit и Unity UI (uGUI)?",
+    "answer": "UI Toolkit — более современный стиль-ориентированный подход (UXML/USS), uGUI — компонентный подход на GameObject/Canvas.",
+    "tags": [
+      "UI",
+      "Rendering",
+      "UI Toolkit"
+    ]
+  },
+  {
+    "question": "Как сделать UI-элемент адаптивным под разные разрешения?",
+    "answer": "Используйте anchors, pivots и layout-компоненты для адаптации размеров и позиций под разные экраны.",
+    "tags": [
+      "UI",
+      "Rendering",
+      "Layout"
+    ]
+  },
+  {
+    "question": "Что такое Raycast Target и почему это важно?",
+    "answer": "Raycast Target определяет, принимает ли UI-графика события указателя и блокирует ли их прохождение дальше.",
+    "tags": [
+      "UI",
+      "Rendering"
+    ]
+  },
+  {
+    "question": "Как обрабатывать события ввода на UI-элементах?",
+    "answer": "В uGUI используйте event-интерфейсы и callbacks компонентов, в UI Toolkit — зарегистрированные callbacks элементов.",
+    "tags": [
+      "UI",
+      "Rendering",
+      "UI Toolkit"
+    ]
+  },
+  {
+    "question": "Что такое ScriptableObject?",
+    "answer": "ScriptableObject — это контейнер данных в виде asset-файла, независимый от объектов сцены.",
+    "tags": [
+      "ScriptableObject",
+      "Данные",
+      "Архитектура",
+      "C#"
+    ]
+  },
+  {
+    "question": "Когда стоит использовать ScriptableObject вместо MonoBehaviour?",
+    "answer": "Используйте ScriptableObject для общих настроек и данных, которые должны жить отдельно от экземпляров в сцене.",
+    "tags": [
+      "ScriptableObject",
+      "Данные",
+      "Архитектура",
+      "C#"
+    ]
+  },
+  {
+    "question": "Как создать asset ScriptableObject?",
+    "answer": "Наследуйтесь от ScriptableObject, при необходимости добавьте CreateAssetMenu, затем создайте и сохраните экземпляр asset.",
+    "tags": [
+      "ScriptableObject",
+      "Данные",
+      "Архитектура",
+      "C#"
+    ]
+  },
+  {
+    "question": "Как ScriptableObject улучшают использование памяти по сравнению с MonoBehaviour?",
+    "answer": "ScriptableObject централизует данные в одном asset вместо дублирования во множестве объектов сцены.",
+    "tags": [
+      "ScriptableObject",
+      "Данные",
+      "Архитектура",
+      "C#"
+    ]
+  },
+  {
+    "question": "Могут ли ScriptableObject содержать поведение?",
+    "answer": "Методы в ScriptableObject возможны, но покадровую логику обычно оставляют в MonoBehaviour.",
+    "tags": [
+      "ScriptableObject",
+      "Данные",
+      "Архитектура",
+      "C#"
+    ]
+  },
+  {
+    "question": "Как редактировать данные ScriptableObject в Inspector?",
+    "answer": "Создайте или выберите asset ScriptableObject и редактируйте сериализуемые поля в Inspector.",
+    "tags": [
+      "ScriptableObject",
+      "Данные",
+      "Архитектура",
+      "C#"
+    ]
+  },
+  {
+    "question": "Как запустить корутину?",
+    "answer": "Запускайте корутину вызовом StartCoroutine(SomeIEnumerator()) из MonoBehaviour.",
+    "tags": [
+      "Корутины",
+      "C#",
+      "Performance"
+    ]
+  },
+  {
+    "question": "Как остановить выполняющуюся корутину?",
+    "answer": "Для одной корутины используйте StopCoroutine(reference), для всех на компоненте — StopAllCoroutines().",
+    "tags": [
+      "Корутины",
+      "C#",
+      "Performance"
+    ]
+  },
+  {
+    "question": "Почему следует избегать долгих блокирующих задач в корутинах?",
+    "answer": "Корутины работают на главном потоке, поэтому тяжелые операции в них все равно блокируют игру и рендер.",
+    "tags": [
+      "Корутины",
+      "C#",
+      "Performance",
+      "Память"
+    ]
+  },
+  {
+    "question": "Что делает yield return null в корутине?",
+    "answer": "yield return null приостанавливает корутину до следующего кадра.",
+    "tags": [
+      "Корутины",
+      "C#",
+      "Performance"
+    ]
+  },
+  {
+    "question": "Как выполнять код на каждом фиксированном тике внутри корутины?",
+    "answer": "Используйте yield return new WaitForFixedUpdate(), чтобы синхронизироваться с физическими тиками.",
+    "tags": [
+      "Корутины",
+      "C#",
+      "Performance"
+    ]
+  },
+  {
+    "question": "Почему стоит кэшировать экземпляры WaitForSeconds?",
+    "answer": "Переиспользование WaitForSeconds уменьшает количество аллокаций и снижает пики сборщика мусора.",
+    "tags": [
+      "Корутины",
+      "C#",
+      "Performance",
+      "Память"
+    ]
+  },
+  {
+    "question": "Что такое NavMesh?",
+    "answer": "NavMesh — это запеченная проходимая геометрия для поиска пути агентами вокруг препятствий.",
+    "tags": [
+      "NavMesh",
+      "AI",
+      "Математика"
+    ]
+  },
+  {
+    "question": "Как сгенерировать NavMesh в Unity?",
+    "answer": "Пометьте геометрию для навигации и выполните bake NavMesh в настройках навигации.",
+    "tags": [
+      "NavMesh",
+      "AI",
+      "Математика"
+    ]
+  },
+  {
+    "question": "Как агенты используют NavMesh для поиска пути?",
+    "answer": "NavMeshAgent вычисляет и проходит маршрут после установки точки назначения.",
+    "tags": [
+      "NavMesh",
+      "AI",
+      "Математика"
+    ]
+  },
+  {
+    "question": "Что такое слои NavMesh и off-mesh links?",
+    "answer": "Слои NavMesh фильтруют доступные зоны, а off-mesh links соединяют области для прыжков, дверей и разрывов.",
+    "tags": [
+      "NavMesh",
+      "AI",
+      "Математика"
+    ]
+  },
+  {
+    "question": "Как обрабатывать движущиеся препятствия с NavMesh?",
+    "answer": "Для движущихся препятствий используйте NavMeshObstacle с carving или динамические обновления/локальное избегание.",
+    "tags": [
+      "NavMesh",
+      "AI",
+      "Математика"
+    ]
+  },
+  {
+    "question": "Что такое Animation State Machine?",
+    "answer": "Animation State Machine — это граф состояний и переходов, который задает логику проигрывания анимаций.",
+    "tags": [
+      "Animation",
+      "Animator",
+      "Rendering"
+    ]
+  },
+  {
+    "question": "Что такое Animator Controller?",
+    "answer": "Animator Controller хранит состояния, переходы, слои и blend trees для управления анимациями.",
+    "tags": [
+      "Animation",
+      "Animator",
+      "Rendering"
+    ]
+  },
+  {
+    "question": "Что такое параметры анимации в Animator?",
+    "answer": "Параметры Animator (float/int/bool/trigger) управляют переходами и смешиванием анимаций.",
+    "tags": [
+      "Animation",
+      "Animator",
+      "Rendering"
+    ]
+  },
+  {
+    "question": "Что такое переходы анимации?",
+    "answer": "Переходы определяют, когда и как Animator переключается между состояниями.",
+    "tags": [
+      "Animation",
+      "Animator",
+      "Rendering"
+    ]
+  },
+  {
+    "question": "Что такое blend tree анимации?",
+    "answer": "Blend tree плавно смешивает несколько клипов по управляющему параметру, например скорости.",
+    "tags": [
+      "Animation",
+      "Animator",
+      "Rendering"
+    ]
+  },
+  {
+    "question": "Что такое слой анимации?",
+    "answer": "Слои анимации позволяют отдельным state machine управлять разными частями тела с переопределениями.",
+    "tags": [
+      "Animation",
+      "Animator",
+      "Rendering"
+    ]
+  },
+  {
+    "question": "Почему сравнение Unity-объектов через == null отличается от ReferenceEquals?",
+    "answer": "Unity переопределяет сравнение для UnityEngine.Object, поэтому == null может отличаться от реальной CLR-проверки null.",
+    "tags": [
+      "Performance",
+      "C#",
+      "Память",
+      "Unity API"
+    ]
+  },
+  {
+    "question": "Почему в Unity стоит избегать финализаторов C#?",
+    "answer": "Финализаторы недетерминированы, выполняются в другом потоке и могут конфликтовать с API Unity главного потока.",
+    "tags": [
+      "Performance",
+      "C#",
+      "Память"
+    ]
+  },
+  {
+    "question": "Какие риски для производительности связаны с частыми выделениями памяти в Unity?",
+    "answer": "Частые аллокации увеличивают нагрузку на GC и вызывают фризы/скачки времени кадра.",
+    "tags": [
+      "Performance",
+      "C#",
+      "Память"
+    ]
+  },
+  {
+    "question": "Почему стоит кэшировать компоненты, например результаты GetComponent?",
+    "answer": "Повторные вызовы GetComponent дороги; лучше кэшировать ссылки в Awake/Start.",
+    "tags": [
+      "Performance",
+      "C#",
+      "Память"
+    ]
+  },
+  {
+    "question": "Когда использовать Destroy, а когда DestroyImmediate?",
+    "answer": "В геймплее используйте Destroy, а DestroyImmediate предназначен в основном для editor-сценариев.",
+    "tags": [
+      "Performance",
+      "C#",
+      "Память",
+      "Unity API"
+    ]
+  },
+  {
+    "question": "Почему в производительно-критичном коде стоит избегать LINQ?",
+    "answer": "LINQ может создавать лишние аллокации и работать медленнее на горячих участках, например в Update.",
+    "tags": [
+      "Performance",
+      "C#",
+      "Память"
+    ]
+  },
+  {
+    "question": "Как плавно перемещать Rigidbody без Transform.Translate?",
+    "answer": "Используйте Rigidbody.MovePosition или силы, чтобы движение оставалось корректным для физики.",
+    "tags": [
+      "Physics",
+      "Rigidbody",
+      "C#"
+    ]
+  },
+  {
+    "question": "В чем разница между Awake и OnEnable?",
+    "answer": "Awake вызывается один раз при загрузке, а OnEnable — каждый раз при включении объекта/компонента.",
+    "tags": [
+      "MonoBehaviour",
+      "Lifecycle",
+      "C#"
+    ]
+  },
+  {
+    "question": "Какое преимущество Addressables по сравнению с ручным управлением AssetBundle?",
+    "answer": "Addressables дают более высокий уровень управления загрузкой и зависимостями по сравнению с низкоуровневым AssetBundle API.",
+    "tags": [
+      "Addressables",
+      "AssetBundle",
+      "Архитектура"
+    ]
+  },
+  {
+    "question": "Какие преимущества дает development build при тестировании?",
+    "answer": "Development build содержит символы отладки и профилировщик для диагностики и анализа производительности.",
+    "tags": [
+      "Сборка",
+      "Отладка",
+      "Performance"
+    ]
+  },
+  {
+    "question": "Как уменьшить нагрузку на сборщик мусора, связанную с корутинами?",
+    "answer": "Кэшируйте и переиспользуйте yield-инструкции вроде WaitForSeconds вместо постоянного создания новых.",
+    "tags": [
+      "Корутины",
+      "Performance",
+      "Память"
+    ]
+  },
+  {
+    "question": "Как централизовать конфигурационные данные, доступные между Scene?",
+    "answer": "Храните общие настройки в ScriptableObject asset и ссылайтесь на него из объектов сцен.",
+    "tags": [
+      "ScriptableObject",
+      "Архитектура",
+      "Данные"
+    ]
+  },
+  {
+    "question": "Как Time.timeScale влияет на ожидание корутин, например WaitForSeconds?",
+    "answer": "WaitForSeconds работает в масштабируемом времени: уменьшение timeScale замедляет ожидание, timeScale=0 ставит его на паузу.",
+    "tags": [
+      "Time",
+      "Корутины",
+      "C#"
+    ]
+  },
+  {
+    "question": "Что такое Time.deltaTime и почему его используют с Input.GetAxis?",
+    "answer": "deltaTime переводит ввод осей в скорость в секунду, делая управление независимым от частоты кадров.",
+    "tags": [
+      "Input",
+      "Time",
+      "C#"
+    ]
+  },
+  {
+    "question": "Почему следует избегать дорогих операций в Update?",
+    "answer": "Update вызывается каждый кадр, поэтому тяжелые операции в нем быстро ухудшают производительность.",
+    "tags": [
+      "Performance",
+      "C#"
+    ]
+  },
+  {
+    "question": "Для чего нужно слоение UI внутри Canvas?",
+    "answer": "Слоение в иерархии управляет порядком отрисовки и позволяет держать оверлеи поверх основного контента.",
+    "tags": [
+      "UI",
+      "Rendering",
+      "Layout"
+    ]
+  },
+  {
+    "question": "Как реализовать динамическую загрузку Scene или ассетов во время выполнения?",
+    "answer": "Используйте AssetBundle или Addressables для загрузки контента по требованию и контроля памяти.",
+    "tags": [
+      "Addressables",
+      "AssetBundle",
+      "Сцены"
+    ]
+  }
+]
