@@ -94,6 +94,7 @@ export function PracticeWorkspace({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<ModalState>(null);
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>(initialView);
   const [browseTagFilter, setBrowseTagFilter] = useState<string[]>([]);
   const [masteredIds, setMasteredIds] = useState<string[]>(loadMasteredIds);
@@ -412,64 +413,110 @@ export function PracticeWorkspace({
       <div className="pointer-events-none fixed inset-x-0 top-[-260px] z-0 h-[520px] bg-[radial-gradient(circle_at_top,_rgba(47,123,255,0.22),_transparent_62%)] dark:bg-[radial-gradient(circle_at_top,_rgba(138,109,255,0.25),_transparent_62%)]" />
 
       <div className="relative z-10 mx-auto max-w-7xl px-6 pb-10 pt-6 lg:px-10">
-        <header className="surface-panel mb-8 flex flex-wrap items-center justify-between gap-4 px-5 py-3">
-          <button
-            type="button"
-            onClick={onBack}
-            className="inline-flex items-center gap-3 rounded-xl px-1 py-1 text-left transition hover:opacity-85"
-          >
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 text-lg font-bold text-white">
-              U
-            </span>
-            <span>
-              <span className="block text-sm font-semibold tracking-wide text-slate-900 dark:text-slate-100">UnityPrep Cards</span>
-              <span className="block text-xs text-slate-500 dark:text-slate-400">Практика по интервью</span>
-            </span>
-          </button>
+        <header className="saas-header mb-8">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <button
+                type="button"
+                onClick={onBack}
+                className="inline-flex items-center gap-3 rounded-xl px-1 py-1 text-left transition hover:opacity-85"
+              >
+                <span className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-brand-500 to-accent-500 text-sm font-bold text-white">
+                  U
+                </span>
+                <span className="hidden sm:block">
+                  <span className="block text-sm font-semibold tracking-wide text-slate-900 dark:text-slate-100">UnityPrep Cards</span>
+                  <span className="block text-[11px] text-slate-500 dark:text-slate-400">Рабочее пространство</span>
+                </span>
+              </button>
 
-          <div className="inline-flex rounded-xl border border-slate-300 bg-white/70 p-1 dark:border-slate-600 dark:bg-[#252b3a]/80">
-            <button
-              type="button"
-              onClick={() => setViewMode('browse')}
-              className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
-                viewMode === 'browse'
-                  ? 'bg-gradient-to-r from-brand-500 to-accent-500 text-white'
-                  : 'text-slate-600 hover:text-brand-600 dark:text-slate-300'
-              }`}
-            >
-              Наборы вопросов
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('study')}
-              className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
-                viewMode === 'study'
-                  ? 'bg-gradient-to-r from-brand-500 to-accent-500 text-white'
-                  : 'text-slate-600 hover:text-brand-600 dark:text-slate-300'
-              }`}
-            >
-              Тренировка
-            </button>
+              <div className="hidden items-center gap-1 lg:flex">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('browse')}
+                  className={`header-nav-link ${viewMode === 'browse' ? 'header-nav-link-active' : ''}`}
+                >
+                  Банк вопросов
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('study')}
+                  className={`header-nav-link ${viewMode === 'study' ? 'header-nav-link-active' : ''}`}
+                >
+                  Тренировка
+                </button>
+                <button
+                  type="button"
+                  disabled
+                  className="header-nav-link cursor-not-allowed opacity-55 hover:text-slate-600 dark:hover:text-slate-300"
+                >
+                  Интервью
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={theme === 'dark'}
+                onClick={onToggleTheme}
+                aria-label="Переключить тему"
+                className="header-theme-toggle"
+              >
+                {theme === 'light' ? '☀' : '☾'}
+              </button>
+              {authEnabled && (
+                <TelegramAuthControl
+                  user={authUser}
+                  loading={authLoading}
+                  onUserChange={onAuthChange}
+                  onAddCard={() => setModal({ mode: 'create', card: null })}
+                  className="shrink-0"
+                />
+              )}
+              <button
+                type="button"
+                onClick={() => setHeaderMenuOpen((prev) => !prev)}
+                className="header-mobile-toggle"
+                aria-expanded={headerMenuOpen}
+              >
+                Меню
+              </button>
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={onToggleTheme}
-              className="rounded-xl border border-slate-300 bg-white/75 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-brand-400 hover:text-brand-600 dark:border-slate-600 dark:bg-[#252b3a]/80 dark:text-slate-200"
-            >
-              {theme === 'light' ? 'Темная тема' : 'Светлая тема'}
-            </button>
-            {authEnabled && <TelegramAuthControl user={authUser} loading={authLoading} onUserChange={onAuthChange} />}
-            <button
-              type="button"
-              onClick={() => setModal({ mode: 'create', card: null })}
-              className="cta-button px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={authEnabled && !authUser}
-            >
-              + Добавить карточку
-            </button>
-          </div>
+          {headerMenuOpen && (
+            <div className="header-mobile-panel">
+              <button
+                type="button"
+                onClick={() => {
+                  setHeaderMenuOpen(false);
+                  setViewMode('browse');
+                }}
+                className={`header-nav-link text-left ${viewMode === 'browse' ? 'header-nav-link-active' : ''}`}
+              >
+                Банк вопросов
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setHeaderMenuOpen(false);
+                  setViewMode('study');
+                }}
+                className={`header-nav-link text-left ${viewMode === 'study' ? 'header-nav-link-active' : ''}`}
+              >
+                Тренировка
+              </button>
+              <button
+                type="button"
+                disabled
+                className="header-nav-link cursor-not-allowed text-left opacity-55 hover:text-slate-600 dark:hover:text-slate-300"
+              >
+                Интервью
+              </button>
+            </div>
+          )}
         </header>
 
         {authEnabled && !authUser && (
@@ -482,7 +529,7 @@ export function PracticeWorkspace({
           <section className="surface-panel p-5">
             <div className="mb-5 grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
               <label className="grid gap-2">
-                <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Поиск в наборе вопросов</span>
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Поиск в банке вопросов</span>
                 <input
                   type="search"
                   placeholder="Поиск по вопросу, ответу или тегу..."
@@ -498,6 +545,18 @@ export function PracticeWorkspace({
                 <p>Освоено: {masteredCount}</p>
               </div>
             </div>
+
+            {!authEnabled && (
+              <div className="mb-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setModal({ mode: 'create', card: null })}
+                  className="rounded-xl border border-slate-300 bg-white/75 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-brand-400 hover:text-brand-600 dark:border-slate-600 dark:bg-[#252b3a]/80 dark:text-slate-200"
+                >
+                  Добавить карточку
+                </button>
+              </div>
+            )}
 
             <div className="mb-4 inline-flex rounded-xl border border-slate-300 bg-white/75 p-1 dark:border-slate-600 dark:bg-[#252b3a]/80">
               <button
@@ -601,7 +660,7 @@ export function PracticeWorkspace({
         {viewMode === 'study' && (
           <section className="grid gap-4 lg:grid-cols-[360px_1fr]">
             <aside className="surface-panel p-5">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Тренировка по тегам</h2>
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Тренировка</h2>
               <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                 Выберите один или несколько тегов. Система покажет случайную карточку, содержащую хотя бы один из них.
               </p>

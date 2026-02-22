@@ -7,6 +7,9 @@ type Props = {
   user: AuthUser | null;
   loading?: boolean;
   onUserChange: (user: AuthUser | null) => void;
+  onAddCard?: () => void;
+  onProfile?: () => void;
+  className?: string;
 };
 
 function isTelegramPayload(value: unknown): value is TelegramAuthPayload {
@@ -30,14 +33,44 @@ function displayName(user: AuthUser): string {
   return [user.firstName, user.lastName].filter(Boolean).join(' ');
 }
 
-export function TelegramAuthControl({ user, loading = false, onUserChange }: Props) {
+export function TelegramAuthControl({ user, loading = false, onUserChange, onAddCard, onProfile, className }: Props) {
   const widgetContainerRef = useRef<HTMLDivElement | null>(null);
   const callbackNameRef = useRef(`unityprepTelegramAuth_${Math.random().toString(36).slice(2)}`);
+  const menuRootRef = useRef<HTMLDivElement | null>(null);
   const [authInProgress, setAuthInProgress] = useState(false);
   const [widgetVersion, setWidgetVersion] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const botUsername = getTelegramBotUsername();
+
+  useEffect(() => {
+    if (!menuOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!menuRootRef.current) {
+        return;
+      }
+      if (!menuRootRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('keydown', handleEscape);
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [menuOpen]);
 
   useEffect(() => {
     if (loading || user || !botUsername || !widgetContainerRef.current) {
@@ -76,9 +109,9 @@ export function TelegramAuthControl({ user, loading = false, onUserChange }: Pro
     script.setAttribute('data-telegram-login', botUsername);
     script.setAttribute('data-size', 'medium');
     script.setAttribute('data-userpic', 'false');
-    script.setAttribute('data-radius', '10');
+    script.setAttribute('data-radius', '8');
     script.setAttribute('data-request-access', 'write');
-    script.setAttribute('data-lang', 'ru');
+    script.setAttribute('data-lang', 'en');
     script.setAttribute('data-onauth', `${callbackName}(user)`);
 
     container.appendChild(script);
@@ -100,11 +133,36 @@ export function TelegramAuthControl({ user, loading = false, onUserChange }: Pro
     onUserChange(null);
     setWidgetVersion((prev) => prev + 1);
     setError(null);
+    setMenuOpen(false);
+  }
+
+  function handleProfileClick() {
+    if (!user) {
+      return;
+    }
+
+    if (user.username) {
+      window.open(`https://t.me/${user.username}`, '_blank', 'noopener,noreferrer');
+    }
+  }
+
+  function runProfileAction(onProfile?: () => void) {
+    setMenuOpen(false);
+    if (onProfile) {
+      onProfile();
+      return;
+    }
+    handleProfileClick();
+  }
+
+  function runAddCardAction(onAddCard?: () => void) {
+    setMenuOpen(false);
+    onAddCard?.();
   }
 
   if (loading) {
     return (
-      <div className="telegram-auth-inline rounded-xl border border-slate-300 bg-white/70 px-3 py-2 text-xs text-slate-500 dark:border-slate-600 dark:bg-[#252b3a]/80 dark:text-slate-300">
+      <div className={`telegram-auth-inline auth-loading-state ${className ?? ''}`}>
         Проверка сессии...
       </div>
     );
@@ -112,39 +170,58 @@ export function TelegramAuthControl({ user, loading = false, onUserChange }: Pro
 
   if (user) {
     return (
-      <div className="telegram-auth-inline flex items-center gap-2 rounded-xl border border-slate-300 bg-white/75 px-2 py-1.5 dark:border-slate-600 dark:bg-[#252b3a]/80">
-        <div className="flex items-center gap-2 px-1">
-          {user.photoUrl ? (
-            <img src={user.photoUrl} alt="Avatar" className="h-8 w-8 rounded-full border border-slate-300/80 object-cover dark:border-slate-500/80" />
-          ) : (
-            <div className="grid h-8 w-8 place-items-center rounded-full bg-brand-500/15 text-xs font-bold text-brand-700 dark:bg-brand-400/20 dark:text-brand-200">
-              {user.firstName.slice(0, 1).toUpperCase()}
+      <div className={`telegram-auth-inline ${className ?? ''}`}>
+        <div ref={menuRootRef} className="auth-menu-root">
+          <button
+            type="button"
+            onClick={() => setMenuOpen((prev) => !prev)}
+            aria-expanded={menuOpen}
+            className="auth-user-trigger"
+          >
+            {user.photoUrl ? (
+              <img src={user.photoUrl} alt="Avatar" className="h-8 w-8 rounded-full border border-slate-300/80 object-cover dark:border-slate-500/80" />
+            ) : (
+              <div className="grid h-8 w-8 place-items-center rounded-full bg-brand-500/15 text-xs font-bold text-brand-700 dark:bg-brand-400/20 dark:text-brand-200">
+                {user.firstName.slice(0, 1).toUpperCase()}
+              </div>
+            )}
+            <span className="max-w-[140px] truncate text-xs font-semibold text-slate-700 dark:text-slate-100">{displayName(user)}</span>
+            <span className={`text-[10px] text-slate-500 transition ${menuOpen ? 'rotate-180' : ''}`} aria-hidden>
+              ▼
+            </span>
+          </button>
+
+          {menuOpen && (
+            <div className="auth-menu-panel" role="menu" aria-label="User menu">
+              <button type="button" className="auth-menu-item" onClick={() => runProfileAction(onProfile)}>
+                Профиль
+              </button>
+              {onAddCard && (
+                <button type="button" className="auth-menu-item" onClick={() => runAddCardAction(onAddCard)}>
+                  Добавить карточку
+                </button>
+              )}
+              <button type="button" className="auth-menu-item auth-menu-item-danger" onClick={handleLogout}>
+                Выйти
+              </button>
             </div>
           )}
-          <span className="max-w-[140px] truncate text-xs font-semibold text-slate-700 dark:text-slate-200">{displayName(user)}</span>
         </div>
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="rounded-lg border border-slate-300 bg-white/80 px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:border-brand-400 hover:text-brand-600 dark:border-slate-600 dark:bg-[#1f2534] dark:text-slate-200"
-        >
-          Выйти
-        </button>
       </div>
     );
   }
 
   if (!botUsername) {
     return (
-      <div className="telegram-auth-inline rounded-xl border border-amber-300 bg-amber-50/90 px-3 py-2 text-xs text-amber-700 dark:border-amber-500/50 dark:bg-amber-500/10 dark:text-amber-300">
+      <div className={`telegram-auth-inline auth-missing-state ${className ?? ''}`}>
         Вход через Telegram не настроен.
       </div>
     );
   }
 
   return (
-    <div className="telegram-auth-inline" title={error ?? undefined}>
-      <div key={widgetVersion} className="telegram-auth-widget-slot" ref={widgetContainerRef} />
+    <div className={`telegram-auth-inline ${className ?? ''}`} title={error ?? undefined}>
+      <div key={widgetVersion} className="telegram-auth-widget-slot auth-telegram-widget-shell" ref={widgetContainerRef} />
       {authInProgress && (
         <span className="ml-2 text-[11px] text-slate-500 dark:text-slate-400" aria-live="polite">
           Вход...

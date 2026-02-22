@@ -217,8 +217,11 @@ export function Flashcard({
     if (showMasteredSweep) {
       classes.push('mastered-sweep');
     }
+    if (isFlipped) {
+      classes.push('difficulty-muted');
+    }
     return classes.join(' ');
-  }, [difficulty, mastered, showMasteredSweep]);
+  }, [difficulty, mastered, showMasteredSweep, isFlipped]);
 
   const answerBlocks = useMemo(() => buildAnswerBlocks(card.answer), [card.answer]);
 

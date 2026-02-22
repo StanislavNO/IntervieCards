@@ -10,7 +10,7 @@ export function inferDifficulty(card: Card): Difficulty {
 
 export function difficultyLabel(difficulty: Difficulty): string {
   if (difficulty === 'hard') return 'Senior';
-  if (difficulty === 'medium') return 'Mid';
+  if (difficulty === 'medium') return 'MIDLE';
   return 'Junior';
 }
 

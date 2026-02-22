@@ -109,6 +109,7 @@ export default function App() {
   const [practiceInitialView, setPracticeInitialView] = useState<PracticeView>(
     initialRoute.page === 'practice' ? initialRoute.view : 'study'
   );
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
@@ -185,6 +186,7 @@ export default function App() {
   }
 
   function openPractice(view: PracticeView) {
+    setHeaderMenuOpen(false);
     setPracticeInitialView(view);
     setIsPracticeOpen(true);
     writeRoute({ page: 'practice', view });
@@ -224,51 +226,84 @@ export default function App() {
       <div className="pointer-events-none fixed inset-x-0 top-[-240px] z-0 h-[560px] bg-[radial-gradient(circle_at_top,_rgba(47,123,255,0.22),_transparent_62%)] dark:bg-[radial-gradient(circle_at_top,_rgba(138,109,255,0.25),_transparent_62%)]" />
 
       <div className="relative z-10 mx-auto min-h-screen max-w-6xl px-6 pb-20 pt-6 lg:px-10">
-        <nav className="surface-panel mb-14 flex items-center justify-between px-5 py-3">
-          <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 text-lg font-bold text-white">
-              U
-            </div>
-            <div>
-              <p className="text-sm font-semibold tracking-wide text-slate-900 dark:text-slate-100">UnityPrep Cards</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Подготовка к интервью для Unity-разработчиков</p>
-            </div>
-          </div>
+        <nav className="saas-header mb-14">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="inline-flex items-center gap-3 text-left">
+                <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-brand-500 to-accent-500 text-sm font-bold text-white">
+                  U
+                </div>
+                <div className="hidden sm:block">
+                  <p className="text-sm font-semibold tracking-wide text-slate-900 dark:text-slate-100">UnityPrep Cards</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Подготовка к интервью Unity</p>
+                </div>
+              </button>
 
-          <div className="hidden items-center gap-8 text-sm font-medium text-slate-600 dark:text-slate-300 md:flex">
-            <a href="#demo" className="transition hover:text-brand-500">
-              Демо
-            </a>
-            <a href="#features" className="transition hover:text-brand-500">
-              Возможности
-            </a>
-            <a href="#start" className="transition hover:text-brand-500">
-              Старт
-            </a>
-          </div>
+              <div className="hidden items-center gap-1 lg:flex">
+                <button type="button" onClick={() => openPractice('browse')} className="header-nav-link">
+                  Банк вопросов
+                </button>
+                <button type="button" onClick={() => openPractice('study')} className="header-nav-link">
+                  Тренировка
+                </button>
+                <a href="#demo" className="header-nav-link">
+                  Демо
+                </a>
+                <a href="#features" className="header-nav-link">
+                  Возможности
+                </a>
+              </div>
+            </div>
 
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <div className="inline-flex shrink-0 items-center gap-3 rounded-full border border-slate-300/80 bg-white px-3 py-1.5 shadow-sm dark:border-slate-600 dark:bg-[#242a39]">
-              <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Тема</span>
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 role="switch"
                 aria-checked={theme === 'dark'}
                 onClick={toggleTheme}
                 aria-label="Переключить тему"
-                className="relative h-7 w-14 rounded-full bg-slate-300 transition dark:bg-brand-500/60"
+                className="header-theme-toggle"
               >
-                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-700">L</span>
-                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-100">D</span>
-                <span
-                  className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform duration-300 ${
-                    theme === 'dark' ? 'translate-x-7' : 'translate-x-0.5'
-                  } left-0.5`}
+                {theme === 'light' ? '☀' : '☾'}
+              </button>
+
+              {authEnabled && (
+                <TelegramAuthControl
+                  user={authUser}
+                  loading={authLoading}
+                  onUserChange={setAuthUser}
+                  onAddCard={() => openPractice('browse')}
+                  className="shrink-0"
                 />
+              )}
+
+              <button
+                type="button"
+                onClick={() => setHeaderMenuOpen((prev) => !prev)}
+                className="header-mobile-toggle"
+                aria-expanded={headerMenuOpen}
+              >
+                Меню
               </button>
             </div>
-            {authEnabled && <TelegramAuthControl user={authUser} loading={authLoading} onUserChange={setAuthUser} />}
           </div>
+
+          {headerMenuOpen && (
+            <div className="header-mobile-panel">
+              <button type="button" onClick={() => openPractice('browse')} className="header-nav-link text-left">
+                Банк вопросов
+              </button>
+              <button type="button" onClick={() => openPractice('study')} className="header-nav-link text-left">
+                Тренировка
+              </button>
+              <a href="#demo" onClick={() => setHeaderMenuOpen(false)} className="header-nav-link">
+                Демо
+              </a>
+              <a href="#features" onClick={() => setHeaderMenuOpen(false)} className="header-nav-link">
+                Возможности
+              </a>
+            </div>
+          )}
         </nav>
 
         <section id="demo" className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
@@ -297,7 +332,7 @@ export default function App() {
                 onClick={() => openPractice('browse')}
                 className="rounded-xl border border-slate-300 bg-white/75 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-brand-400 hover:text-brand-600 dark:border-slate-600 dark:bg-[#222838]/85 dark:text-slate-200 dark:hover:border-brand-400 dark:hover:text-brand-300"
               >
-                Открыть наборы вопросов
+                Открыть банк вопросов
               </button>
             </div>
           </div>
@@ -317,7 +352,7 @@ export default function App() {
                 }`}
               >
                 <article
-                  className={`glass-card flip-face card-depth card-lux difficulty-${card.difficulty} absolute inset-0 flex flex-col p-6 [transform:translateZ(0.1px)]`}
+                  className="flip-face absolute inset-0 flex flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-soft [transform:translateZ(0.1px)] dark:border-slate-700 dark:bg-[#1e2433]"
                 >
                   <div className="mb-3 flex items-center justify-between">
                     <span className="difficulty-badge" data-difficulty={card.difficulty}>
@@ -340,7 +375,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => setIsRevealed(true)}
-                      className="cta-button w-full px-4 py-3 text-sm"
+                      className="w-full rounded-xl bg-gradient-to-r from-brand-500 to-accent-500 px-4 py-3 text-sm font-semibold text-white transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900"
                     >
                       Показать ответ
                     </button>
@@ -348,7 +383,7 @@ export default function App() {
                 </article>
 
                 <article
-                  className={`glass-card flip-face card-depth card-lux difficulty-${card.difficulty} absolute inset-0 flex flex-col p-6 [transform:rotateY(180deg)_translateZ(0.1px)]`}
+                  className="flip-face absolute inset-0 flex flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-soft [transform:rotateY(180deg)_translateZ(0.1px)] dark:border-slate-700 dark:bg-[#1e2433]"
                 >
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Ответ</p>
                   <p className="mt-4 max-w-[68ch] text-sm leading-7 text-slate-700 dark:text-slate-200">{card.answer}</p>
@@ -366,7 +401,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={showNextCard}
-                      className="cta-button px-4 py-2.5 text-sm"
+                      className="rounded-xl bg-gradient-to-r from-brand-500 to-accent-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900"
                     >
                       Следующий вопрос
                     </button>

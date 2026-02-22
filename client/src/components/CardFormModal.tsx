@@ -253,7 +253,7 @@ export function CardFormModal({ mode, card, availableTags, onClose, onSubmit }: 
               className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-brand-400 dark:border-slate-600 dark:bg-[#252b3a] dark:text-slate-100"
             >
               <option value="easy">Junior</option>
-              <option value="medium">Mid</option>
+              <option value="medium">MIDLE</option>
               <option value="hard">Senior</option>
             </select>
           </label>
