@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { cardsApi } from '../api';
 import type { Card, CardPayload, CardSort, ReactionValue } from '../types';
-import { difficultyClass, difficultyLabel, inferDifficulty, tagCategoryClass } from '../utils/cardPresentation';
+import { inferDifficulty, tagCategoryClass } from '../utils/cardPresentation';
 import { CardFormModal } from './CardFormModal';
 import { Flashcard } from './Flashcard';
 
@@ -14,6 +14,7 @@ type ModalState = {
 } | null;
 
 type ViewMode = 'browse' | 'study';
+type StudyHistoryEntry = { entryId: string; cardId: string };
 
 type Props = {
   initialView: ViewMode;
@@ -85,6 +86,7 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack, o
   const [studySelectedTags, setStudySelectedTags] = useState<string[]>([]);
   const [studyCurrentCardId, setStudyCurrentCardId] = useState<string | null>(null);
   const [studyRemainingIds, setStudyRemainingIds] = useState<string[]>([]);
+  const [studyHistoryEntries, setStudyHistoryEntries] = useState<StudyHistoryEntry[]>([]);
 
   useEffect(() => {
     setViewMode(initialView);
@@ -145,18 +147,19 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack, o
     return cards.find((card) => card.id === studyCurrentCardId) ?? null;
   }, [cards, studyCurrentCardId]);
 
-  const studyNextPreviewCard = useMemo(() => {
-    if (!studyCurrentCard) {
-      return null;
-    }
-
-    const nextFromQueueId = studyRemainingIds[0];
-    if (nextFromQueueId) {
-      return cards.find((card) => card.id === nextFromQueueId) ?? null;
-    }
-
-    return studyPool.find((card) => card.id !== studyCurrentCard.id) ?? null;
-  }, [cards, studyCurrentCard, studyPool, studyRemainingIds]);
+  const studyHistoryCards = useMemo(
+    () =>
+      studyHistoryEntries
+        .map((entry) => {
+          const card = cards.find((item) => item.id === entry.cardId);
+          if (!card) {
+            return null;
+          }
+          return { entryId: entry.entryId, card };
+        })
+        .filter((item): item is { entryId: string; card: Card } => item !== null),
+    [cards, studyHistoryEntries]
+  );
 
   useEffect(() => {
     const poolIdSet = new Set(studyPool.map((card) => card.id));
@@ -173,6 +176,11 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack, o
       setStudyCurrentCardId(null);
     }
   }, [studyPool, studyCurrentCardId]);
+
+  useEffect(() => {
+    const cardIdSet = new Set(cards.map((card) => card.id));
+    setStudyHistoryEntries((prev) => prev.filter((entry) => cardIdSet.has(entry.cardId)));
+  }, [cards]);
 
   async function loadCards(sort: CardSort) {
     try {
@@ -281,6 +289,7 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack, o
   function resetStudySession() {
     setStudyCurrentCardId(null);
     setStudyRemainingIds([]);
+    setStudyHistoryEntries([]);
   }
 
   function toggleStudyTag(tag: string) {
@@ -315,11 +324,16 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack, o
     const shuffledIds = shuffle(studyPool.map((card) => card.id));
     setStudyCurrentCardId(shuffledIds[0] ?? null);
     setStudyRemainingIds(shuffledIds.slice(1));
+    setStudyHistoryEntries([]);
   }
 
   function drawNextStudyCard() {
     if (studyPool.length === 0) {
       return;
+    }
+
+    if (studyCurrentCardId) {
+      setStudyHistoryEntries((prev) => [{ entryId: crypto.randomUUID(), cardId: studyCurrentCardId }, ...prev]);
     }
 
     if (studyRemainingIds.length > 0) {
@@ -611,53 +625,10 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack, o
               {studyCurrentCard ? (
                 <>
                   <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    Используйте кнопку «Следующий вопрос»
+                    Активная карточка
                   </p>
                   <div className="pointer-events-none absolute inset-x-10 top-14 h-24 rounded-full bg-[radial-gradient(circle,_rgba(108,155,255,0.22),_transparent_68%)] dark:bg-[radial-gradient(circle,_rgba(103,123,255,0.26),_transparent_70%)]" />
                   <div className="relative mx-auto max-w-2xl">
-                    {studyNextPreviewCard && (
-                      <div
-                        className="pointer-events-none absolute inset-x-4 top-5 z-0"
-                        style={{
-                          transform: 'translateY(14px) scale(0.965)',
-                          opacity: 0.78
-                        }}
-                      >
-                        <article
-                          className={`glass-card card-depth card-lux ${difficultyClass(
-                            inferDifficulty(studyNextPreviewCard)
-                          )} relative h-[420px] overflow-hidden p-5`}
-                        >
-                          <div className="absolute inset-0 bg-gradient-to-b from-white/15 to-transparent dark:from-white/10" />
-                          <div className="relative flex h-full flex-col">
-                            <div className="mb-3 flex items-center justify-between">
-                              <span className="difficulty-badge" data-difficulty={inferDifficulty(studyNextPreviewCard)}>
-                                {difficultyLabel(inferDifficulty(studyNextPreviewCard))}
-                              </span>
-                              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
-                                Следующая
-                              </span>
-                            </div>
-                            {studyNextPreviewCard.tags.length > 0 && (
-                              <div className="mb-3 flex flex-wrap gap-2">
-                                {studyNextPreviewCard.tags.slice(0, 4).map((tag) => (
-                                  <span key={`${studyNextPreviewCard.id}-${tag}`} className={`tag-chip ${tagCategoryClass(tag)}`}>
-                                    {tag}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
-                              Вопрос
-                            </p>
-                            <p className="max-h-[170px] overflow-hidden text-[1.02rem] font-semibold leading-7 text-slate-900 dark:text-slate-100">
-                              {studyNextPreviewCard.question}
-                            </p>
-                          </div>
-                        </article>
-                      </div>
-                    )}
-
                     <div className="relative z-10">
                       <Flashcard
                         key={studyCurrentCard.id}
@@ -676,6 +647,47 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack, o
                       />
                     </div>
                   </div>
+
+                  <section className="mt-6">
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+                        История карточек
+                      </p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Прокрутите вниз</p>
+                    </div>
+                    {studyHistoryCards.length === 0 ? (
+                      <div className="history-card rounded-xl px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
+                        История появится после перехода к следующему вопросу.
+                      </div>
+                    ) : (
+                      <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
+                        {studyHistoryCards.map(({ entryId, card }, index) => (
+                          <article key={entryId} className={`history-card history-card-enter rounded-xl px-4 py-3`}>
+                            <div className="mb-2 flex items-center justify-between gap-2">
+                              <span className="history-badge">Прошлая карточка</span>
+                              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+                                #{studyHistoryCards.length - index}
+                              </span>
+                            </div>
+                            {card.tags.length > 0 && (
+                              <div className="mb-2 flex flex-wrap gap-2">
+                                {card.tags.slice(0, 5).map((tag) => (
+                                  <span key={`${entryId}-${tag}`} className={`tag-chip ${tagCategoryClass(tag)}`}>
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+                              Вопрос
+                            </p>
+                            <p className="text-sm font-semibold leading-6 text-slate-800 dark:text-slate-100">{card.question}</p>
+                            <p className="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-300">{card.answer}</p>
+                          </article>
+                        ))}
+                      </div>
+                    )}
+                  </section>
                 </>
               ) : (
                 <div className="flex h-[420px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50/80 text-center text-sm text-slate-500 dark:border-slate-600 dark:bg-[#252b3a]/70 dark:text-slate-400">
