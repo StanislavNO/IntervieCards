@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { cardsApi } from '../api';
 import type { Card, CardPayload, CardSort, ReactionValue } from '../types';
-import { inferDifficulty, tagCategoryClass } from '../utils/cardPresentation';
+import { difficultyClass, difficultyLabel, inferDifficulty, tagCategoryClass } from '../utils/cardPresentation';
 import { CardFormModal } from './CardFormModal';
 import { Flashcard } from './Flashcard';
 
@@ -84,6 +84,8 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack }:
   const [studySelectedTags, setStudySelectedTags] = useState<string[]>([]);
   const [studyCurrentCardId, setStudyCurrentCardId] = useState<string | null>(null);
   const [studyRemainingIds, setStudyRemainingIds] = useState<string[]>([]);
+  const [studySwipeOffset, setStudySwipeOffset] = useState(0);
+  const [studyIsDragging, setStudyIsDragging] = useState(false);
 
   useEffect(() => {
     setViewMode(initialView);
@@ -140,6 +142,19 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack }:
     return cards.find((card) => card.id === studyCurrentCardId) ?? null;
   }, [cards, studyCurrentCardId]);
 
+  const studyNextPreviewCard = useMemo(() => {
+    if (!studyCurrentCard) {
+      return null;
+    }
+
+    const nextFromQueueId = studyRemainingIds[0];
+    if (nextFromQueueId) {
+      return cards.find((card) => card.id === nextFromQueueId) ?? null;
+    }
+
+    return studyPool.find((card) => card.id !== studyCurrentCard.id) ?? null;
+  }, [cards, studyCurrentCard, studyPool, studyRemainingIds]);
+
   useEffect(() => {
     const poolIdSet = new Set(studyPool.map((card) => card.id));
 
@@ -155,6 +170,11 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack }:
       setStudyCurrentCardId(null);
     }
   }, [studyPool, studyCurrentCardId]);
+
+  useEffect(() => {
+    setStudySwipeOffset(0);
+    setStudyIsDragging(false);
+  }, [studyCurrentCardId]);
 
   async function loadCards(sort: CardSort) {
     try {
@@ -596,21 +616,75 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack }:
                     Свайп влево/вправо или кнопка «Следующая»
                   </p>
                   <div className="pointer-events-none absolute inset-x-10 top-14 h-24 rounded-full bg-[radial-gradient(circle,_rgba(108,155,255,0.22),_transparent_68%)] dark:bg-[radial-gradient(circle,_rgba(103,123,255,0.26),_transparent_70%)]" />
-                  <Flashcard
-                    key={studyCurrentCard.id}
-                    card={studyCurrentCard}
-                    difficulty={inferDifficulty(studyCurrentCard)}
-                    mastered={masteredSet.has(studyCurrentCard.id)}
-                    onToggleMastered={(selected) => toggleMastered(selected.id)}
-                    showActions={false}
-                    swipeEnabled
-                    motionEnabled={false}
-                    onSwipe={() => drawNextStudyCard()}
-                    onNext={() => drawNextStudyCard()}
-                    nextLabel="Следующий вопрос"
-                    className="mx-auto max-w-2xl"
-                    onReact={(selected, value) => handleReaction(selected.id, value)}
-                  />
+                  <div className="relative mx-auto max-w-2xl">
+                    {studyNextPreviewCard && (
+                      <div
+                        className="pointer-events-none absolute inset-x-4 top-5 z-0"
+                        style={{
+                          transform: `translateY(${Math.max(8, 20 - Math.min(Math.abs(studySwipeOffset) / 10, 12))}px) scale(${
+                            0.96 + Math.min(Math.abs(studySwipeOffset) / 1200, 0.03)
+                          })`,
+                          opacity: studyIsDragging ? 0.92 : 0.76,
+                          transition: studyIsDragging ? 'none' : 'transform 200ms ease, opacity 200ms ease'
+                        }}
+                      >
+                        <article
+                          className={`glass-card card-depth card-lux ${difficultyClass(
+                            inferDifficulty(studyNextPreviewCard)
+                          )} relative h-[420px] overflow-hidden p-5`}
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-b from-white/15 to-transparent dark:from-white/10" />
+                          <div className="relative flex h-full flex-col">
+                            <div className="mb-3 flex items-center justify-between">
+                              <span className="difficulty-badge" data-difficulty={inferDifficulty(studyNextPreviewCard)}>
+                                {difficultyLabel(inferDifficulty(studyNextPreviewCard))}
+                              </span>
+                              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+                                Следующая
+                              </span>
+                            </div>
+                            {studyNextPreviewCard.tags.length > 0 && (
+                              <div className="mb-3 flex flex-wrap gap-2">
+                                {studyNextPreviewCard.tags.slice(0, 4).map((tag) => (
+                                  <span key={`${studyNextPreviewCard.id}-${tag}`} className={`tag-chip ${tagCategoryClass(tag)}`}>
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+                              Вопрос
+                            </p>
+                            <p className="max-h-[170px] overflow-hidden text-[1.02rem] font-semibold leading-7 text-slate-900 dark:text-slate-100">
+                              {studyNextPreviewCard.question}
+                            </p>
+                          </div>
+                        </article>
+                      </div>
+                    )}
+
+                    <div className="relative z-10">
+                      <Flashcard
+                        key={studyCurrentCard.id}
+                        card={studyCurrentCard}
+                        difficulty={inferDifficulty(studyCurrentCard)}
+                        mastered={masteredSet.has(studyCurrentCard.id)}
+                        onToggleMastered={(selected) => toggleMastered(selected.id)}
+                        showActions={false}
+                        swipeEnabled
+                        motionEnabled={false}
+                        onSwipe={() => drawNextStudyCard()}
+                        onSwipeProgress={(offset, dragging) => {
+                          setStudySwipeOffset(offset);
+                          setStudyIsDragging(dragging);
+                        }}
+                        onNext={() => drawNextStudyCard()}
+                        nextLabel="Следующий вопрос"
+                        className="mx-auto max-w-2xl"
+                        onReact={(selected, value) => handleReaction(selected.id, value)}
+                      />
+                    </div>
+                  </div>
                 </>
               ) : (
                 <div className="flex h-[420px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50/80 text-center text-sm text-slate-500 dark:border-slate-600 dark:bg-[#252b3a]/70 dark:text-slate-400">

@@ -22,6 +22,7 @@ type Props = {
   showActions?: boolean;
   swipeEnabled?: boolean;
   onSwipe?: (direction: SwipeDirection) => void;
+  onSwipeProgress?: (offset: number, isDragging: boolean) => void;
   onNext?: () => void;
   nextLabel?: string;
   className?: string;
@@ -55,6 +56,7 @@ export function Flashcard({
   showActions = true,
   swipeEnabled = false,
   onSwipe,
+  onSwipeProgress,
   onNext,
   nextLabel = 'Следующий вопрос',
   className = '',
@@ -76,6 +78,10 @@ export function Flashcard({
   const prevMasteredRef = useRef(mastered);
 
   useEffect(() => {
+    onSwipeProgress?.(swipeOffset, isDragging);
+  }, [isDragging, onSwipeProgress, swipeOffset]);
+
+  useEffect(() => {
     return () => {
       if (swipeTimeoutRef.current !== null) {
         window.clearTimeout(swipeTimeoutRef.current);
@@ -86,8 +92,9 @@ export function Flashcard({
       if (masteredSweepTimeoutRef.current !== null) {
         window.clearTimeout(masteredSweepTimeoutRef.current);
       }
+      onSwipeProgress?.(0, false);
     };
-  }, []);
+  }, [onSwipeProgress]);
 
   useEffect(() => {
     if (mastered && !prevMasteredRef.current) {
