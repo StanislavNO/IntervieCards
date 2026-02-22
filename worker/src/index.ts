@@ -6,6 +6,8 @@ type Bindings = {
   DB: D1Database;
   ALLOWED_ORIGIN?: string;
   LIKES_SALT?: string;
+  TELEGRAM_BOT_TOKEN?: string;
+  AUTH_SECRET?: string;
 };
 
 type Difficulty = 'easy' | 'medium' | 'hard';
@@ -61,8 +63,39 @@ type ReactionSummary = {
   userReaction: ReactionValue | 0;
 };
 
-const app = new Hono<{ Bindings: Bindings }>();
+type TelegramAuthPayload = {
+  id: string;
+  first_name: string;
+  last_name?: string;
+  username?: string;
+  photo_url?: string;
+  auth_date: number;
+  hash: string;
+};
+
+type AuthUser = {
+  id: string;
+  firstName: string;
+  lastName?: string;
+  username?: string;
+  photoUrl?: string;
+  authDate: number;
+};
+
+const telegramAuthMaxAgeSeconds = 24 * 60 * 60;
+const authTokenLifetimeSeconds = 30 * 24 * 60 * 60;
+const tokenHeader = { alg: 'HS256', typ: 'JWT' } as const;
+const textEncoder = new TextEncoder();
 const nonEmpty = z.string().trim().min(1);
+const numericString = z.string().trim().regex(/^\d+$/);
+const optionalTrimmedString = z
+  .string()
+  .trim()
+  .max(255)
+  .optional()
+  .transform((value) => (value ? value : undefined));
+
+const app = new Hono<{ Bindings: Bindings }>();
 const difficultySchema = z.enum(['easy', 'medium', 'hard']);
 const normalizedStringArray = z
   .array(nonEmpty)
@@ -97,6 +130,18 @@ const reactionSchema = z.object({
   value: z.union([z.literal(1), z.literal(-1)])
 });
 
+const telegramAuthSchema = z.object({
+  id: z
+    .union([z.number().int().positive().transform(String), numericString])
+    .transform((value) => String(value)),
+  first_name: nonEmpty.max(255),
+  last_name: optionalTrimmedString,
+  username: optionalTrimmedString,
+  photo_url: optionalTrimmedString,
+  auth_date: z.union([z.number().int().positive(), numericString.transform((value) => Number(value))]),
+  hash: z.string().trim().regex(/^[a-f0-9]{64}$/iu)
+});
+
 app.use('/api/*', async (c, next) => {
   const allowedOrigins = parseAllowedOrigins(c.env.ALLOWED_ORIGIN);
   return cors({
@@ -106,11 +151,52 @@ app.use('/api/*', async (c, next) => {
       return allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
     },
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowHeaders: ['Content-Type']
+    allowHeaders: ['Content-Type', 'Authorization']
   })(c, next);
 });
 
 app.get('/api/health', (c) => c.json({ ok: true }));
+
+app.post('/api/auth/telegram', async (c) => {
+  const botToken = c.env.TELEGRAM_BOT_TOKEN?.trim();
+  if (!botToken) {
+    return c.json({ error: 'Telegram auth is not configured on server' }, 503);
+  }
+
+  const body = await safeJson(c);
+  if (!body.ok) {
+    return c.json({ error: 'Invalid JSON payload' }, 400);
+  }
+
+  const parsed = telegramAuthSchema.safeParse(body.value);
+  if (!parsed.success) {
+    return c.json({ error: 'Validation error', details: parsed.error.issues }, 400);
+  }
+
+  const user = await verifyTelegramAuthPayload(parsed.data, botToken);
+  if (!user) {
+    return c.json({ error: 'Invalid Telegram auth payload' }, 401);
+  }
+
+  const token = await issueAuthToken(user, resolveAuthSecret(c.env));
+  return c.json({ token, user });
+});
+
+app.get('/api/auth/me', async (c) => {
+  const token = parseBearerToken(c.req.header('authorization'));
+  if (!token) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  const user = await verifyAuthToken(token, resolveAuthSecret(c.env));
+  if (!user) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  return c.json({ user });
+});
+
+app.post('/api/auth/logout', (c) => c.body(null, 204));
 
 app.get('/api/cards', async (c) => {
   const sortQuery = c.req.query('sort');
@@ -160,6 +246,11 @@ app.get('/api/cards/:id', async (c) => {
 });
 
 app.post('/api/cards', async (c) => {
+  const unauthorized = await requireAuth(c);
+  if (unauthorized) {
+    return unauthorized;
+  }
+
   const body = await safeJson(c);
   if (!body.ok) {
     return c.json({ error: 'Invalid JSON payload' }, 400);
@@ -208,6 +299,11 @@ app.post('/api/cards', async (c) => {
 });
 
 app.put('/api/cards/:id', async (c) => {
+  const unauthorized = await requireAuth(c);
+  if (unauthorized) {
+    return unauthorized;
+  }
+
   const id = c.req.param('id');
   const requesterHash = await getRequesterHash(c);
   const current = await getCardById(c.env.DB, id, requesterHash);
@@ -256,6 +352,11 @@ app.put('/api/cards/:id', async (c) => {
 });
 
 app.delete('/api/cards/:id', async (c) => {
+  const unauthorized = await requireAuth(c);
+  if (unauthorized) {
+    return unauthorized;
+  }
+
   const id = c.req.param('id');
   const now = new Date().toISOString();
   const result = await c.env.DB.prepare(
@@ -361,6 +462,11 @@ app.get('/api/cards/:id/reaction', async (c) => {
 });
 
 app.post('/api/cards/:id/reaction', async (c) => {
+  const unauthorized = await requireAuth(c);
+  if (unauthorized) {
+    return unauthorized;
+  }
+
   const cardId = c.req.param('id');
   const exists = await cardExists(c.env.DB, cardId);
   if (!exists) {
@@ -440,6 +546,173 @@ app.onError((error, c) => {
 });
 
 export default app;
+
+async function requireAuth(c: Context<{ Bindings: Bindings }>): Promise<Response | null> {
+  const authEnabled = Boolean(c.env.TELEGRAM_BOT_TOKEN?.trim());
+  if (!authEnabled) {
+    return null;
+  }
+
+  const token = parseBearerToken(c.req.header('authorization'));
+  if (!token) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  const user = await verifyAuthToken(token, resolveAuthSecret(c.env));
+  if (!user) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  return null;
+}
+
+function parseBearerToken(headerValue: string | undefined): string | null {
+  if (!headerValue) {
+    return null;
+  }
+
+  const [scheme, token] = headerValue.split(' ');
+  if (!scheme || !token || scheme.toLowerCase() !== 'bearer') {
+    return null;
+  }
+
+  return token.trim() || null;
+}
+
+function resolveAuthSecret(env: Bindings): string {
+  return env.AUTH_SECRET?.trim() || env.TELEGRAM_BOT_TOKEN?.trim() || 'unityprep-dev-auth-secret';
+}
+
+async function verifyTelegramAuthPayload(payload: TelegramAuthPayload, botToken: string): Promise<AuthUser | null> {
+  const now = Math.floor(Date.now() / 1000);
+  if (payload.auth_date > now + 60 || now - payload.auth_date > telegramAuthMaxAgeSeconds) {
+    return null;
+  }
+
+  const dataCheckString = getTelegramDataCheckString(payload);
+  const secretKey = await digestSha256(botToken);
+  const computedHash = await signHmacSha256Hex(secretKey, dataCheckString);
+  const payloadHash = payload.hash.toLowerCase();
+
+  if (!timingSafeEqualHex(computedHash, payloadHash)) {
+    return null;
+  }
+
+  return {
+    id: payload.id,
+    firstName: payload.first_name,
+    lastName: payload.last_name,
+    username: payload.username,
+    photoUrl: payload.photo_url,
+    authDate: payload.auth_date
+  };
+}
+
+function getTelegramDataCheckString(payload: TelegramAuthPayload): string {
+  const fields: Record<string, string> = {
+    id: payload.id,
+    auth_date: String(payload.auth_date),
+    first_name: payload.first_name
+  };
+
+  if (payload.last_name) {
+    fields.last_name = payload.last_name;
+  }
+  if (payload.username) {
+    fields.username = payload.username;
+  }
+  if (payload.photo_url) {
+    fields.photo_url = payload.photo_url;
+  }
+
+  return Object.entries(fields)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, value]) => `${key}=${value}`)
+    .join('\n');
+}
+
+async function issueAuthToken(user: AuthUser, secret: string): Promise<string> {
+  const iat = Math.floor(Date.now() / 1000);
+  const exp = iat + authTokenLifetimeSeconds;
+  const payload = {
+    sub: user.id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    username: user.username,
+    photoUrl: user.photoUrl,
+    authDate: user.authDate,
+    iat,
+    exp
+  };
+
+  const encodedHeader = base64UrlEncodeText(JSON.stringify(tokenHeader));
+  const encodedPayload = base64UrlEncodeText(JSON.stringify(payload));
+  const data = `${encodedHeader}.${encodedPayload}`;
+  const signature = await signHmacSha256(toArrayBuffer(textEncoder.encode(secret)), data);
+
+  return `${data}.${base64UrlEncodeBytes(signature)}`;
+}
+
+async function verifyAuthToken(token: string, secret: string): Promise<AuthUser | null> {
+  const parts = token.split('.');
+  if (parts.length !== 3) {
+    return null;
+  }
+
+  const [encodedHeader, encodedPayload, encodedSignature] = parts;
+  const signatureBytes = base64UrlDecodeBytes(encodedSignature);
+  if (!signatureBytes) {
+    return null;
+  }
+
+  const data = `${encodedHeader}.${encodedPayload}`;
+  const expectedSignature = await signHmacSha256(toArrayBuffer(textEncoder.encode(secret)), data);
+  if (!timingSafeEqualBytes(signatureBytes, expectedSignature)) {
+    return null;
+  }
+
+  const headerRaw = base64UrlDecodeText(encodedHeader);
+  const payloadRaw = base64UrlDecodeText(encodedPayload);
+  if (!headerRaw || !payloadRaw) {
+    return null;
+  }
+
+  try {
+    const header = JSON.parse(headerRaw) as { alg?: string; typ?: string };
+    if (header.alg !== 'HS256' || header.typ !== 'JWT') {
+      return null;
+    }
+
+    const decodedPayload = JSON.parse(payloadRaw) as {
+      sub?: string;
+      firstName?: string;
+      lastName?: string;
+      username?: string;
+      photoUrl?: string;
+      authDate?: number;
+      exp?: number;
+    };
+
+    if (typeof decodedPayload.sub !== 'string' || typeof decodedPayload.firstName !== 'string') {
+      return null;
+    }
+
+    if (typeof decodedPayload.exp !== 'number' || decodedPayload.exp <= Math.floor(Date.now() / 1000)) {
+      return null;
+    }
+
+    return {
+      id: decodedPayload.sub,
+      firstName: decodedPayload.firstName,
+      lastName: decodedPayload.lastName,
+      username: decodedPayload.username,
+      photoUrl: decodedPayload.photoUrl,
+      authDate: typeof decodedPayload.authDate === 'number' ? decodedPayload.authDate : 0
+    };
+  } catch {
+    return null;
+  }
+}
 
 function parseAllowedOrigins(value?: string): string[] {
   if (!value) return [];
@@ -636,7 +909,7 @@ async function getRequesterHash(c: Context<{ Bindings: Bindings }>): Promise<str
 }
 
 async function hashValue(value: string): Promise<string> {
-  const encoded = new TextEncoder().encode(value);
+  const encoded = textEncoder.encode(value);
   const digest = await crypto.subtle.digest('SHA-256', encoded);
   const bytes = new Uint8Array(digest);
   return Array.from(bytes)
@@ -650,4 +923,117 @@ async function safeJson(c: Context<{ Bindings: Bindings }>) {
   } catch {
     return { ok: false as const };
   }
+}
+
+async function digestSha256(value: string): Promise<ArrayBuffer> {
+  const digest = await crypto.subtle.digest('SHA-256', textEncoder.encode(value));
+  return digest;
+}
+
+async function signHmacSha256Hex(key: ArrayBuffer, data: string): Promise<string> {
+  const bytes = await signHmacSha256(key, data);
+  return bytesToHex(bytes);
+}
+
+async function signHmacSha256(key: ArrayBuffer, data: string): Promise<Uint8Array> {
+  const cryptoKey = await crypto.subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const signature = await crypto.subtle.sign('HMAC', cryptoKey, textEncoder.encode(data));
+  return new Uint8Array(signature);
+}
+
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(bytes.length);
+  copy.set(bytes);
+  return copy.buffer;
+}
+
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes)
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function hexToBytes(value: string): Uint8Array | null {
+  if (value.length % 2 !== 0) {
+    return null;
+  }
+
+  const bytes = new Uint8Array(value.length / 2);
+  for (let index = 0; index < value.length; index += 2) {
+    const part = value.slice(index, index + 2);
+    const parsed = Number.parseInt(part, 16);
+    if (Number.isNaN(parsed)) {
+      return null;
+    }
+    bytes[index / 2] = parsed;
+  }
+  return bytes;
+}
+
+function timingSafeEqualHex(left: string, right: string): boolean {
+  const leftBytes = hexToBytes(left);
+  const rightBytes = hexToBytes(right);
+  if (!leftBytes || !rightBytes) {
+    return false;
+  }
+  return timingSafeEqualBytes(leftBytes, rightBytes);
+}
+
+function timingSafeEqualBytes(left: Uint8Array, right: Uint8Array): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  let diff = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    diff |= left[index] ^ right[index];
+  }
+  return diff === 0;
+}
+
+function base64UrlEncodeText(value: string): string {
+  return base64UrlEncodeBytes(textEncoder.encode(value));
+}
+
+function base64UrlDecodeText(value: string): string | null {
+  const bytes = base64UrlDecodeBytes(value);
+  if (!bytes) {
+    return null;
+  }
+  try {
+    return new TextDecoder().decode(bytes);
+  } catch {
+    return null;
+  }
+}
+
+function base64UrlEncodeBytes(bytes: Uint8Array): string {
+  return bytesToBase64(bytes).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function base64UrlDecodeBytes(value: string): Uint8Array | null {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+  const paddingLength = (4 - (normalized.length % 4)) % 4;
+  try {
+    return base64ToBytes(`${normalized}${'='.repeat(paddingLength)}`);
+  } catch {
+    return null;
+  }
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  for (let index = 0; index < bytes.length; index += 1) {
+    binary += String.fromCharCode(bytes[index]);
+  }
+  return btoa(binary);
+}
+
+function base64ToBytes(value: string): Uint8Array {
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
 }

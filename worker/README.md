@@ -8,13 +8,16 @@ Hono API for UnityPrep Cards, backed by D1.
 - `GET /api/cards`
 - `GET /api/cards?sort=popular`
 - `GET /api/cards/:id`
-- `POST /api/cards`
-- `PUT /api/cards/:id`
-- `DELETE /api/cards/:id` (soft delete)
+- `POST /api/auth/telegram`
+- `GET /api/auth/me`
+- `POST /api/auth/logout`
+- `POST /api/cards` (requires Bearer token if Telegram auth enabled)
+- `PUT /api/cards/:id` (requires Bearer token if Telegram auth enabled)
+- `DELETE /api/cards/:id` (soft delete, requires Bearer token if Telegram auth enabled)
 - `GET /api/cards/:id/comments`
 - `POST /api/cards/:id/comments`
 - `GET /api/cards/:id/reaction`
-- `POST /api/cards/:id/reaction` with `{ "value": 1 | -1 }`
+- `POST /api/cards/:id/reaction` with `{ "value": 1 | -1 }` (requires Bearer token if Telegram auth enabled)
 - `GET /api/cards/:id/likes`
 - `POST /api/cards/:id/likes`
 
@@ -36,4 +39,15 @@ npm run d1:seed:remote
 5. Deploy:
 ```bash
 npm run deploy
+```
+
+## Telegram auth (optional)
+
+If `TELEGRAM_BOT_TOKEN` is set, write operations require authorization.
+
+Set Worker secrets:
+
+```bash
+wrangler secret put TELEGRAM_BOT_TOKEN
+wrangler secret put AUTH_SECRET
 ```

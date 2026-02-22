@@ -19,6 +19,7 @@ Local full-stack app for studying Unity interview questions with CRUD editing.
 - Real-time search (question + answer)
 - Теги карточек: `C#`, `Математика`, `Rendering`, `ECS` + пользовательские теги
 - Add / edit / delete cards
+- Telegram authentication (Login Widget)
 - Dark/light theme toggle with persistence in `localStorage`
 - Responsive card grid for desktop/mobile
 
@@ -33,13 +34,16 @@ Local full-stack app for studying Unity interview questions with CRUD editing.
 - `GET /api/cards`
 - `GET /api/cards?sort=popular`
 - `GET /api/cards/:id`
-- `POST /api/cards`
-- `PUT /api/cards/:id`
-- `DELETE /api/cards/:id`
+- `POST /api/auth/telegram`
+- `GET /api/auth/me`
+- `POST /api/auth/logout`
+- `POST /api/cards` (requires Bearer token)
+- `PUT /api/cards/:id` (requires Bearer token)
+- `DELETE /api/cards/:id` (requires Bearer token)
 - `GET /api/cards/:id/comments` (Cloudflare Worker)
 - `POST /api/cards/:id/comments` (Cloudflare Worker)
 - `GET /api/cards/:id/reaction` (Cloudflare Worker)
-- `POST /api/cards/:id/reaction` (Cloudflare Worker)
+- `POST /api/cards/:id/reaction` (Cloudflare Worker, requires Bearer token on Express API)
 - `GET /api/cards/:id/likes` (Cloudflare Worker)
 - `POST /api/cards/:id/likes` (Cloudflare Worker)
 
@@ -79,6 +83,24 @@ Optional for TLS connections:
 
 ```bash
 DATABASE_SSL=true
+```
+
+### Telegram Auth Setup
+
+If `TELEGRAM_BOT_TOKEN` is configured, write actions require authorization.
+If it is not configured, API works in open mode (legacy behavior).
+
+Server env:
+
+```bash
+TELEGRAM_BOT_TOKEN=<bot-token-from-botfather>
+AUTH_SECRET=<random-long-secret>
+```
+
+Client env (`client/.env.local`):
+
+```bash
+VITE_TELEGRAM_BOT_USERNAME=<your_bot_username_without_@>
 ```
 
 ### Local Cloudflare Dev
@@ -157,7 +179,12 @@ npm run d1:seed:remote -w worker
 ```bash
 npm run deploy -w worker
 ```
-6. Deploy `client/` to Cloudflare Pages and set env variable:
+6. (Optional, for Telegram auth on Worker) set secrets:
+```bash
+wrangler secret put TELEGRAM_BOT_TOKEN -w worker
+wrangler secret put AUTH_SECRET -w worker
+```
+7. Deploy `client/` to Cloudflare Pages and set env variable:
 ```bash
 VITE_API_BASE_URL=https://<your-worker>.workers.dev
 ```
