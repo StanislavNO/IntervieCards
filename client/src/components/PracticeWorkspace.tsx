@@ -85,8 +85,6 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack, o
   const [studySelectedTags, setStudySelectedTags] = useState<string[]>([]);
   const [studyCurrentCardId, setStudyCurrentCardId] = useState<string | null>(null);
   const [studyRemainingIds, setStudyRemainingIds] = useState<string[]>([]);
-  const [studySwipeOffset, setStudySwipeOffset] = useState(0);
-  const [studyIsDragging, setStudyIsDragging] = useState(false);
 
   useEffect(() => {
     setViewMode(initialView);
@@ -175,11 +173,6 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack, o
       setStudyCurrentCardId(null);
     }
   }, [studyPool, studyCurrentCardId]);
-
-  useEffect(() => {
-    setStudySwipeOffset(0);
-    setStudyIsDragging(false);
-  }, [studyCurrentCardId]);
 
   async function loadCards(sort: CardSort) {
     try {
@@ -618,7 +611,7 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack, o
               {studyCurrentCard ? (
                 <>
                   <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    Свайп влево/вправо или кнопка «Следующая»
+                    Используйте кнопку «Следующий вопрос»
                   </p>
                   <div className="pointer-events-none absolute inset-x-10 top-14 h-24 rounded-full bg-[radial-gradient(circle,_rgba(108,155,255,0.22),_transparent_68%)] dark:bg-[radial-gradient(circle,_rgba(103,123,255,0.26),_transparent_70%)]" />
                   <div className="relative mx-auto max-w-2xl">
@@ -626,11 +619,8 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack, o
                       <div
                         className="pointer-events-none absolute inset-x-4 top-5 z-0"
                         style={{
-                          transform: `translateY(${Math.max(8, 20 - Math.min(Math.abs(studySwipeOffset) / 10, 12))}px) scale(${
-                            0.96 + Math.min(Math.abs(studySwipeOffset) / 1200, 0.03)
-                          })`,
-                          opacity: studyIsDragging ? 0.92 : 0.76,
-                          transition: studyIsDragging ? 'none' : 'transform 200ms ease, opacity 200ms ease'
+                          transform: 'translateY(14px) scale(0.965)',
+                          opacity: 0.78
                         }}
                       >
                         <article
@@ -676,16 +666,11 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack, o
                         mastered={masteredSet.has(studyCurrentCard.id)}
                         onToggleMastered={(selected) => toggleMastered(selected.id)}
                         showActions={false}
-                        swipeEnabled
+                        swipeEnabled={false}
                         motionEnabled={false}
-                        onSwipe={() => drawNextStudyCard()}
-                        onSwipeProgress={(offset, dragging) => {
-                          setStudySwipeOffset(offset);
-                          setStudyIsDragging(dragging);
-                        }}
                         onNext={() => drawNextStudyCard()}
                         nextLabel="Следующий вопрос"
-                        className="mx-auto max-w-2xl"
+                        className="mx-auto max-w-2xl study-card-enter"
                         onReact={(selected, value) => handleReaction(selected.id, value)}
                       />
                     </div>
