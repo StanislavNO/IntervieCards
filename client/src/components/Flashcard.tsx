@@ -10,6 +10,7 @@ type Props = {
   showActions?: boolean;
   swipeEnabled?: boolean;
   onSwipe?: (direction: SwipeDirection) => void;
+  className?: string;
 };
 
 type PointerState = {
@@ -26,7 +27,8 @@ export function Flashcard({
   onDelete,
   showActions = true,
   swipeEnabled = false,
-  onSwipe
+  onSwipe,
+  className = ''
 }: Props) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [swipeOffset, setSwipeOffset] = useState(0);
@@ -101,70 +103,96 @@ export function Flashcard({
 
   return (
     <article
-      className={`flashcard ${isFlipped ? 'is-flipped' : ''} ${swipeEnabled ? 'swipe-enabled' : ''} ${
-        isDragging ? 'swipe-dragging' : ''
-      }`}
+      className={`relative h-[360px] [perspective:1400px] ${swipeEnabled ? 'touch-pan-y cursor-grab select-none' : ''} ${
+        isDragging ? 'cursor-grabbing' : ''
+      } ${className}`}
       style={articleStyle}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={finishSwipe}
       onPointerCancel={handlePointerCancel}
     >
-      <div className="flashcard-inner">
-        <div className="flashcard-face flashcard-front">
+      <div
+        className={`relative h-full w-full transition-transform duration-500 [transform-style:preserve-3d] ${
+          isFlipped ? '[transform:rotateY(180deg)]' : ''
+        }`}
+      >
+        <section className="absolute inset-0 flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-soft [backface-visibility:hidden] dark:border-slate-700 dark:bg-[#1e2433]">
           {showActions && onEdit && onDelete && (
-            <header className="flashcard-header">
+            <header className="mb-2 flex items-center justify-end gap-2">
               <button
                 type="button"
-                className="icon-button"
                 aria-label="Редактировать карточку"
                 onClick={() => onEdit(card)}
+                className="rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-700 transition hover:border-brand-400 hover:text-brand-600 dark:border-slate-600 dark:text-slate-200"
               >
                 ✎
               </button>
               <button
                 type="button"
-                className="icon-button danger"
                 aria-label="Удалить карточку"
                 onClick={() => onDelete(card)}
+                className="rounded-lg border border-rose-300 px-2 py-1 text-sm text-rose-600 transition hover:bg-rose-50 dark:border-rose-500/50 dark:text-rose-300 dark:hover:bg-rose-500/10"
               >
                 🗑
               </button>
             </header>
           )}
+
           {card.tags.length > 0 && (
-            <div className="card-tags">
+            <div className="mb-3 flex flex-wrap gap-2">
               {card.tags.map((tag) => (
-                <span key={tag} className="tag-pill readonly">
+                <span
+                  key={tag}
+                  className="rounded-full border border-brand-300/60 bg-brand-50 px-2 py-0.5 text-[11px] font-medium text-brand-600 dark:border-brand-500/40 dark:bg-brand-500/10 dark:text-brand-300"
+                >
                   {tag}
                 </span>
               ))}
             </div>
           )}
-          <h3>{card.question}</h3>
-          <button type="button" className="action-button" onClick={() => setIsFlipped(true)}>
-            Показать ответ
-          </button>
-        </div>
 
-        <div className="flashcard-face flashcard-back">
-          <p>{card.answer}</p>
-          <div className="sources">
-            <strong>Источники</strong>
+          <h3 className="text-base font-semibold leading-relaxed text-slate-900 dark:text-slate-100">{card.question}</h3>
+
+          <div className="mt-auto pt-4">
+            <button
+              type="button"
+              onClick={() => setIsFlipped(true)}
+              className="w-full rounded-xl bg-gradient-to-r from-brand-500 to-accent-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110"
+            >
+              Показать ответ
+            </button>
+          </div>
+        </section>
+
+        <section className="absolute inset-0 flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-soft [backface-visibility:hidden] [transform:rotateY(180deg)] dark:border-slate-700 dark:bg-[#1e2433]">
+          <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-200">{card.answer}</p>
+
+          <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-[#222838]">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Источники</p>
             {card.sources.length === 0 ? (
-              <span className="source-empty">Ссылки пока не добавлены</span>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Ссылки пока не добавлены</p>
             ) : (
-              <ul>
+              <ul className="list-disc space-y-1 pl-5 text-sm text-slate-600 dark:text-slate-300">
                 {card.sources.map((source) => (
-                  <li key={source}>{source}</li>
+                  <li key={source} className="break-all">
+                    {source}
+                  </li>
                 ))}
               </ul>
             )}
           </div>
-          <button type="button" className="action-button" onClick={() => setIsFlipped(false)}>
-            Назад к вопросу
-          </button>
-        </div>
+
+          <div className="mt-auto pt-4">
+            <button
+              type="button"
+              onClick={() => setIsFlipped(false)}
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-brand-400 hover:text-brand-600 dark:border-slate-600 dark:bg-[#242a3a] dark:text-slate-200"
+            >
+              Назад к вопросу
+            </button>
+          </div>
+        </section>
       </div>
     </article>
   );
