@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { cardsApi } from '../api';
+import type { Card, CardPayload, CardSort, ReactionValue } from '../types';
+import { inferDifficulty, tagCategoryClass } from '../utils/cardPresentation';
 import { CardFormModal } from './CardFormModal';
 import { Flashcard } from './Flashcard';
-import type { Card, CardPayload } from '../types';
 
-const defaultTagOptions = ['C#', 'Математика', 'Rendering', 'ECS'];
+const defaultTagOptions = ['C#', 'Математика', 'Rendering', 'Physics', 'Architecture', 'Networking', 'ECS'];
+const masteredStorageKey = 'unityprep-mastered-cards';
 
 type ModalState = {
   mode: 'create' | 'edit';
@@ -33,14 +35,51 @@ function shuffle<T>(items: T[]): T[] {
   return copy;
 }
 
+function getPopularityScore(card: Card): number {
+  if (typeof card.score === 'number') {
+    return card.score;
+  }
+  return (card.likesCount ?? 0) - (card.dislikesCount ?? 0);
+}
+
+function sortByPopularity(cards: Card[]): Card[] {
+  return [...cards].sort((a, b) => {
+    const scoreDiff = getPopularityScore(b) - getPopularityScore(a);
+    if (scoreDiff !== 0) return scoreDiff;
+
+    const likesDiff = (b.likesCount ?? 0) - (a.likesCount ?? 0);
+    if (likesDiff !== 0) return likesDiff;
+
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+}
+
+function loadMasteredIds(): string[] {
+  try {
+    const raw = localStorage.getItem(masteredStorageKey);
+    if (!raw) {
+      return [];
+    }
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed.filter((entry): entry is string => typeof entry === 'string');
+  } catch {
+    return [];
+  }
+}
+
 export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack }: Props) {
   const [cards, setCards] = useState<Card[]>([]);
+  const [browseSort, setBrowseSort] = useState<CardSort>('new');
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<ModalState>(null);
   const [viewMode, setViewMode] = useState<ViewMode>(initialView);
   const [browseTagFilter, setBrowseTagFilter] = useState<string[]>([]);
+  const [masteredIds, setMasteredIds] = useState<string[]>(loadMasteredIds);
 
   const [studySelectedTags, setStudySelectedTags] = useState<string[]>([]);
   const [studyCurrentCardId, setStudyCurrentCardId] = useState<string | null>(null);
@@ -51,8 +90,12 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack }:
   }, [initialView]);
 
   useEffect(() => {
-    void loadCards();
-  }, []);
+    void loadCards(browseSort);
+  }, [browseSort]);
+
+  useEffect(() => {
+    localStorage.setItem(masteredStorageKey, JSON.stringify(masteredIds));
+  }, [masteredIds]);
 
   const availableTags = useMemo(() => {
     const collected = new Set(defaultTagOptions);
@@ -65,6 +108,8 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack }:
     }
     return Array.from(collected);
   }, [cards]);
+
+  const masteredSet = useMemo(() => new Set(masteredIds), [masteredIds]);
 
   const filteredCards = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -111,12 +156,12 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack }:
     }
   }, [studyPool, studyCurrentCardId]);
 
-  async function loadCards() {
+  async function loadCards(sort: CardSort) {
     try {
       setLoading(true);
       setError(null);
-      const data = await cardsApi.getAll();
-      setCards(data);
+      const data = await cardsApi.getAll(sort);
+      setCards(sort === 'popular' ? sortByPopularity(data) : data);
     } catch (fetchError) {
       setError((fetchError as Error).message);
     } finally {
@@ -128,7 +173,7 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack }:
     try {
       setError(null);
       const created = await cardsApi.create(payload);
-      setCards((prev) => [created, ...prev]);
+      setCards((prev) => (browseSort === 'popular' ? sortByPopularity([created, ...prev]) : [created, ...prev]));
     } catch (submitError) {
       setError((submitError as Error).message);
       throw submitError;
@@ -139,7 +184,10 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack }:
     try {
       setError(null);
       const updated = await cardsApi.update(id, payload);
-      setCards((prev) => prev.map((card) => (card.id === id ? updated : card)));
+      setCards((prev) => {
+        const next = prev.map((card) => (card.id === id ? updated : card));
+        return browseSort === 'popular' ? sortByPopularity(next) : next;
+      });
     } catch (submitError) {
       setError((submitError as Error).message);
       throw submitError;
@@ -156,9 +204,41 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack }:
       setError(null);
       await cardsApi.remove(card.id);
       setCards((prev) => prev.filter((entry) => entry.id !== card.id));
+      setMasteredIds((prev) => prev.filter((id) => id !== card.id));
     } catch (deleteError) {
       setError((deleteError as Error).message);
     }
+  }
+
+  async function handleReaction(cardId: string, value: ReactionValue) {
+    try {
+      const summary = await cardsApi.react(cardId, value);
+      setCards((prev) => {
+        const next = prev.map((card) =>
+          card.id === cardId
+            ? {
+                ...card,
+                likesCount: summary.likesCount,
+                dislikesCount: summary.dislikesCount,
+                score: summary.score,
+                userReaction: summary.userReaction
+              }
+            : card
+        );
+        return browseSort === 'popular' ? sortByPopularity(next) : next;
+      });
+    } catch (reactionError) {
+      setError((reactionError as Error).message);
+    }
+  }
+
+  function toggleMastered(cardId: string) {
+    setMasteredIds((prev) => {
+      if (prev.includes(cardId)) {
+        return prev.filter((id) => id !== cardId);
+      }
+      return [...prev, cardId];
+    });
   }
 
   function toggleBrowseTag(tag: string) {
@@ -170,6 +250,14 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack }:
       }
       return [...prev, tag];
     });
+  }
+
+  function selectAllBrowseTags() {
+    setBrowseTagFilter([...availableTags]);
+  }
+
+  function clearBrowseTags() {
+    setBrowseTagFilter([]);
   }
 
   function resetStudySession() {
@@ -188,6 +276,16 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack }:
       return [...prev, tag];
     });
 
+    resetStudySession();
+  }
+
+  function selectAllStudyTags() {
+    setStudySelectedTags([...availableTags]);
+    resetStudySession();
+  }
+
+  function clearStudyTags() {
+    setStudySelectedTags([]);
     resetStudySession();
   }
 
@@ -227,15 +325,22 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack }:
     ? 'Загружаем карточки...'
     : error
       ? `Ошибка загрузки: ${error}`
-      : `Карточек в колоде: ${cards.length}`;
+      : `Карточек в колоде: ${cards.length} (${browseSort === 'popular' ? 'Популярные' : 'Новые'})`;
+
+  const masteredCount = cards.filter((card) => masteredSet.has(card.id)).length;
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-zinc-100 dark:bg-[#161922]">
-      <div className="pointer-events-none absolute inset-0 bg-grid" />
-      <div className="pointer-events-none absolute inset-x-0 top-[-260px] h-[520px] bg-[radial-gradient(circle_at_top,_rgba(47,123,255,0.22),_transparent_62%)] dark:bg-[radial-gradient(circle_at_top,_rgba(138,109,255,0.25),_transparent_62%)]" />
+    <div className="relative isolate min-h-screen overflow-x-hidden">
+      <div className="pointer-events-none fixed inset-0 z-0 bg-grid" />
+      <div className="pointer-events-none fixed inset-0 z-0 bg-mesh" />
+      <div className="pointer-events-none fixed inset-0 z-0 bg-particles" />
+      {viewMode === 'study' && (
+        <div className="pointer-events-none fixed inset-0 z-[1] bg-white/8 backdrop-blur-[2px] dark:bg-transparent dark:backdrop-blur-0" />
+      )}
+      <div className="pointer-events-none fixed inset-x-0 top-[-260px] z-0 h-[520px] bg-[radial-gradient(circle_at_top,_rgba(47,123,255,0.22),_transparent_62%)] dark:bg-[radial-gradient(circle_at_top,_rgba(138,109,255,0.25),_transparent_62%)]" />
 
-      <div className="relative mx-auto max-w-7xl px-6 pb-10 pt-6 lg:px-10">
-        <header className="mb-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200/70 bg-white/80 px-5 py-3 shadow-soft backdrop-blur dark:border-slate-700/60 dark:bg-[#1d212d]/80">
+      <div className="relative z-10 mx-auto max-w-7xl px-6 pb-10 pt-6 lg:px-10">
+        <header className="surface-panel mb-8 flex flex-wrap items-center justify-between gap-4 px-5 py-3">
           <button
             type="button"
             onClick={onBack}
@@ -250,7 +355,7 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack }:
             </span>
           </button>
 
-          <div className="inline-flex rounded-xl border border-slate-300 bg-white p-1 dark:border-slate-600 dark:bg-[#252b3a]">
+          <div className="inline-flex rounded-xl border border-slate-300 bg-white/70 p-1 dark:border-slate-600 dark:bg-[#252b3a]/80">
             <button
               type="button"
               onClick={() => setViewMode('browse')}
@@ -279,22 +384,18 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack }:
             <button
               type="button"
               onClick={onToggleTheme}
-              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-brand-400 hover:text-brand-600 dark:border-slate-600 dark:bg-[#252b3a] dark:text-slate-200"
+              className="rounded-xl border border-slate-300 bg-white/75 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-brand-400 hover:text-brand-600 dark:border-slate-600 dark:bg-[#252b3a]/80 dark:text-slate-200"
             >
               {theme === 'light' ? 'Темная тема' : 'Светлая тема'}
             </button>
-            <button
-              type="button"
-              onClick={() => setModal({ mode: 'create', card: null })}
-              className="rounded-xl bg-gradient-to-r from-brand-500 to-accent-500 px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110"
-            >
+            <button type="button" onClick={() => setModal({ mode: 'create', card: null })} className="cta-button px-4 py-2 text-sm">
               + Добавить карточку
             </button>
           </div>
         </header>
 
         {viewMode === 'browse' && (
-          <section className="rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-soft dark:border-slate-700 dark:bg-[#1d2231]">
+          <section className="surface-panel p-5">
             <div className="mb-5 grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
               <label className="grid gap-2">
                 <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Поиск в наборе вопросов</span>
@@ -304,14 +405,58 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack }:
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   aria-label="Поиск карточек"
-                  className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-slate-900 outline-none transition focus:border-brand-400 dark:border-slate-600 dark:bg-[#252b3a] dark:text-slate-100"
+                  className="rounded-xl border border-slate-300 bg-white/75 px-4 py-2.5 text-slate-900 outline-none transition focus:border-brand-400 dark:border-slate-600 dark:bg-[#252b3a] dark:text-slate-100"
                 />
               </label>
 
-              <p className="text-sm text-slate-500 dark:text-slate-400">{statusText}</p>
+              <div className="text-right text-sm text-slate-500 dark:text-slate-400">
+                <p>{statusText}</p>
+                <p>Освоено: {masteredCount}</p>
+              </div>
+            </div>
+
+            <div className="mb-4 inline-flex rounded-xl border border-slate-300 bg-white/75 p-1 dark:border-slate-600 dark:bg-[#252b3a]/80">
+              <button
+                type="button"
+                onClick={() => setBrowseSort('new')}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                  browseSort === 'new'
+                    ? 'bg-gradient-to-r from-brand-500 to-accent-500 text-white'
+                    : 'text-slate-600 hover:text-brand-600 dark:text-slate-300'
+                }`}
+              >
+                Сначала новые
+              </button>
+              <button
+                type="button"
+                onClick={() => setBrowseSort('popular')}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                  browseSort === 'popular'
+                    ? 'bg-gradient-to-r from-brand-500 to-accent-500 text-white'
+                    : 'text-slate-600 hover:text-brand-600 dark:text-slate-300'
+                }`}
+              >
+                Популярные
+              </button>
             </div>
 
             <div className="mb-4 flex flex-wrap gap-2">
+              <div className="mb-1 flex w-full flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={selectAllBrowseTags}
+                  className="rounded-lg border border-slate-300 bg-white/75 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-brand-400 hover:text-brand-600 dark:border-slate-600 dark:bg-[#252b3a]/80 dark:text-slate-200"
+                >
+                  Выбрать все теги
+                </button>
+                <button
+                  type="button"
+                  onClick={clearBrowseTags}
+                  className="rounded-lg border border-slate-300 bg-white/75 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-brand-400 hover:text-brand-600 dark:border-slate-600 dark:bg-[#252b3a]/80 dark:text-slate-200"
+                >
+                  Сбросить теги
+                </button>
+              </div>
               {availableTags.map((tag) => {
                 const active = browseTagFilter.some((entry) => normalizeTag(entry) === normalizeTag(tag));
                 return (
@@ -319,10 +464,10 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack }:
                     key={tag}
                     type="button"
                     onClick={() => toggleBrowseTag(tag)}
-                    className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                    className={`tag-chip ${tagCategoryClass(tag)} ${
                       active
-                        ? 'border-brand-500 bg-brand-500 text-white'
-                        : 'border-slate-300 bg-white text-slate-700 hover:border-brand-400 hover:text-brand-600 dark:border-slate-600 dark:bg-[#252b3a] dark:text-slate-200'
+                        ? 'tag-selected ring-2 ring-brand-500/80 ring-offset-1 ring-offset-white dark:ring-rose-400/95 dark:ring-offset-[#1c2435]'
+                        : ''
                     }`}
                   >
                     {tag}
@@ -337,27 +482,31 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack }:
                   <Flashcard
                     key={card.id}
                     card={card}
+                    difficulty={inferDifficulty(card)}
+                    mastered={masteredSet.has(card.id)}
+                    onToggleMastered={(selected) => toggleMastered(selected.id)}
                     onEdit={(selected) => setModal({ mode: 'edit', card: selected })}
                     onDelete={(selected) => void handleDelete(selected)}
+                    onReact={(selected, value) => handleReaction(selected.id, value)}
                   />
                 ))}
               </div>
             )}
 
             {!loading && !error && filteredCards.length === 0 && (
-              <p className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500 dark:border-slate-700 dark:bg-[#252b3a] dark:text-slate-400">
+              <p className="mt-6 rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-500 dark:border-slate-700 dark:bg-[#252b3a]/70 dark:text-slate-400">
                 По вашему фильтру ничего не найдено.
               </p>
             )}
 
             {loading && (
-              <p className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500 dark:border-slate-700 dark:bg-[#252b3a] dark:text-slate-400">
+              <p className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-500 dark:border-slate-700 dark:bg-[#252b3a]/70 dark:text-slate-400">
                 Загрузка карточек...
               </p>
             )}
 
             {error && (
-              <p className="rounded-xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-500/50 dark:bg-rose-500/10 dark:text-rose-300">
+              <p className="rounded-xl border border-rose-300 bg-rose-50/80 p-4 text-sm text-rose-700 dark:border-rose-500/50 dark:bg-rose-500/10 dark:text-rose-300">
                 Не удалось загрузить карточки: {error}
               </p>
             )}
@@ -366,13 +515,29 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack }:
 
         {viewMode === 'study' && (
           <section className="grid gap-4 lg:grid-cols-[360px_1fr]">
-            <aside className="rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-soft dark:border-slate-700 dark:bg-[#1d2231]">
+            <aside className="surface-panel p-5">
               <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Тренировка по тегам</h2>
               <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                 Выберите один или несколько тегов. Система покажет случайную карточку, содержащую хотя бы один из них.
               </p>
 
               <div className="mt-4 flex flex-wrap gap-2">
+                <div className="mb-1 flex w-full flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={selectAllStudyTags}
+                    className="rounded-lg border border-slate-300 bg-white/75 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-brand-400 hover:text-brand-600 dark:border-slate-600 dark:bg-[#252b3a]/80 dark:text-slate-200"
+                  >
+                    Выбрать все теги
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearStudyTags}
+                    className="rounded-lg border border-slate-300 bg-white/75 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-brand-400 hover:text-brand-600 dark:border-slate-600 dark:bg-[#252b3a]/80 dark:text-slate-200"
+                  >
+                    Сбросить теги
+                  </button>
+                </div>
                 {availableTags.map((tag) => {
                   const active = studySelectedTags.some((entry) => normalizeTag(entry) === normalizeTag(tag));
                   return (
@@ -380,10 +545,10 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack }:
                       key={tag}
                       type="button"
                       onClick={() => toggleStudyTag(tag)}
-                      className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                      className={`tag-chip ${tagCategoryClass(tag)} ${
                         active
-                          ? 'border-brand-500 bg-brand-500 text-white'
-                          : 'border-slate-300 bg-white text-slate-700 hover:border-brand-400 hover:text-brand-600 dark:border-slate-600 dark:bg-[#252b3a] dark:text-slate-200'
+                          ? 'tag-selected ring-2 ring-brand-500/80 ring-offset-1 ring-offset-white dark:ring-rose-400/95 dark:ring-offset-[#1c2435]'
+                          : ''
                       }`}
                     >
                       {tag}
@@ -397,7 +562,7 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack }:
                   type="button"
                   onClick={startStudySession}
                   disabled={studySelectedTags.length === 0 || studyPool.length === 0}
-                  className="rounded-xl bg-gradient-to-r from-brand-500 to-accent-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-60"
+                  className="cta-button px-4 py-2.5 text-sm disabled:opacity-60"
                 >
                   Начать тренировку
                 </button>
@@ -405,14 +570,14 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack }:
                   type="button"
                   onClick={drawNextStudyCard}
                   disabled={!studyCurrentCard}
-                  className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-brand-400 hover:text-brand-600 disabled:opacity-60 dark:border-slate-600 dark:bg-[#252b3a] dark:text-slate-200"
+                  className="rounded-xl border border-slate-300 bg-white/75 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-brand-400 hover:text-brand-600 disabled:opacity-60 dark:border-slate-600 dark:bg-[#252b3a]/80 dark:text-slate-200"
                 >
                   Следующая случайная карточка
                 </button>
                 <button
                   type="button"
                   onClick={resetStudySession}
-                  className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-brand-400 hover:text-brand-600 dark:border-slate-600 dark:bg-[#252b3a] dark:text-slate-200"
+                  className="rounded-xl border border-slate-300 bg-white/75 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-brand-400 hover:text-brand-600 dark:border-slate-600 dark:bg-[#252b3a]/80 dark:text-slate-200"
                 >
                   Сбросить сессию
                 </button>
@@ -424,23 +589,31 @@ export function PracticeWorkspace({ initialView, theme, onToggleTheme, onBack }:
               </div>
             </aside>
 
-            <div className="rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-soft dark:border-slate-700 dark:bg-[#1d2231]">
+            <div className="focus-shell">
               {studyCurrentCard ? (
                 <>
                   <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                     Свайп влево/вправо или кнопка «Следующая»
                   </p>
+                  <div className="pointer-events-none absolute inset-x-10 top-14 h-24 rounded-full bg-[radial-gradient(circle,_rgba(108,155,255,0.22),_transparent_68%)] dark:bg-[radial-gradient(circle,_rgba(103,123,255,0.26),_transparent_70%)]" />
                   <Flashcard
                     key={studyCurrentCard.id}
                     card={studyCurrentCard}
+                    difficulty={inferDifficulty(studyCurrentCard)}
+                    mastered={masteredSet.has(studyCurrentCard.id)}
+                    onToggleMastered={(selected) => toggleMastered(selected.id)}
                     showActions={false}
                     swipeEnabled
+                    motionEnabled={false}
                     onSwipe={() => drawNextStudyCard()}
+                    onNext={() => drawNextStudyCard()}
+                    nextLabel="Следующий вопрос"
                     className="mx-auto max-w-2xl"
+                    onReact={(selected, value) => handleReaction(selected.id, value)}
                   />
                 </>
               ) : (
-                <div className="flex h-[360px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 text-center text-sm text-slate-500 dark:border-slate-600 dark:bg-[#252b3a] dark:text-slate-400">
+                <div className="flex h-[420px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50/80 text-center text-sm text-slate-500 dark:border-slate-600 dark:bg-[#252b3a]/70 dark:text-slate-400">
                   Нажмите «Начать тренировку», чтобы вытянуть первую карточку.
                 </div>
               )}

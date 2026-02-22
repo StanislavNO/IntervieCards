@@ -4,11 +4,14 @@
   "version": "1.0.0",
   "workspaces": [
     "server",
-    "client"
+    "client",
+    "worker"
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev -w server\" \"npm run dev -w client\"",
+    "dev:cloudflare": "concurrently \"npm run dev -w worker\" \"npm run dev -w client\"",
     "build": "npm run build -w server && npm run build -w client",
+    "build:cloudflare": "npm run build -w worker && npm run build -w client",
     "test": "npm run test -w server"
   },
   "devDependencies": {
