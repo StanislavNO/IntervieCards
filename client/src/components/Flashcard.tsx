@@ -205,32 +205,22 @@ export function Flashcard({
       return;
     }
 
-    const stopDragging = () => {
-      resetSwipe();
-    };
-
     const handleVisibilityChange = () => {
       if (document.visibilityState !== 'visible') {
-        stopDragging();
+        resetSwipe();
       }
     };
 
-    window.addEventListener('mouseup', stopDragging);
-    window.addEventListener('blur', stopDragging);
+    window.addEventListener('blur', resetSwipe);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      window.removeEventListener('mouseup', stopDragging);
-      window.removeEventListener('blur', stopDragging);
+      window.removeEventListener('blur', resetSwipe);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [isDragging]);
 
   const finishSwipe = (event: ReactPointerEvent<HTMLElement>) => {
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-
     const pointer = pointerStateRef.current;
     if (!pointer || pointer.pointerId !== event.pointerId) {
       resetSwipe();
@@ -267,7 +257,7 @@ export function Flashcard({
   };
 
   const handleLostPointerCapture = () => {
-    if (pointerStateRef.current || isDragging) {
+    if (pointerStateRef.current) {
       resetSwipe();
     }
   };
