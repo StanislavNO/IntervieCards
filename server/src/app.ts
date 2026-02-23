@@ -4,7 +4,7 @@ import { ZodError } from 'zod';
 import { issueAuthToken, parseBearerToken, resolveAuthSecret, verifyAuthToken, verifyTelegramAuthPayload } from './auth.js';
 import type { CardRepository } from './repository.js';
 import type { AuthUser } from './types.js';
-import { createCardSchema, reactCardSchema, telegramAuthSchema, updateCardSchema } from './validation.js';
+import { createCardSchema, reactCardSchema, selfPresentationGenerateSchema, telegramAuthSchema, updateCardSchema } from './validation.js';
 
 const ownerUsername = 'stanislavnur';
 
@@ -108,6 +108,20 @@ export function createApp(repository: CardRepository) {
     const rawId = req.params.id;
     return Array.isArray(rawId) ? rawId[0] ?? '' : rawId;
   }
+
+  app.post('/api/self-presentation/generate', requireAuth, async (req, res, next) => {
+    try {
+      const parsed = selfPresentationGenerateSchema.parse(req.body);
+
+      return res.status(501).json({
+        ok: false,
+        upgradeRequired: true,
+        message: `AI-генерация пока недоступна. Запрошенная длительность: ${parsed.settings.duration} сек.`
+      });
+    } catch (error) {
+      return next(error);
+    }
+  });
 
   app.get('/api/cards', async (_req, res, next) => {
     try {

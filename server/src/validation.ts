@@ -50,3 +50,10 @@ export const telegramAuthSchema = z.object({
   auth_date: z.union([z.number().int().positive(), numericString.transform((value) => Number(value))]),
   hash: z.string().trim().regex(/^[a-f0-9]{64}$/iu)
 });
+
+export const selfPresentationGenerateSchema = z.object({
+  data: z.record(z.any()),
+  settings: z.object({
+    duration: z.union([z.literal(60), z.literal(90), z.literal(120)])
+  })
+});

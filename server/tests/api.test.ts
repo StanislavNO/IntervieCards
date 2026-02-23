@@ -284,4 +284,46 @@ describe('cards api', () => {
     });
     expect(response.status).toBe(401);
   });
+
+  it('returns 401 when self-presentation generation is called without auth', async () => {
+    const response = await request(app).post('/api/self-presentation/generate').send({
+      data: {},
+      settings: { duration: 90 }
+    });
+
+    expect(response.status).toBe(401);
+  });
+
+  it('returns 501 placeholder response for self-presentation generation', async () => {
+    const token = await loginAndGetToken(app);
+    const response = await request(app)
+      .post('/api/self-presentation/generate')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        data: {
+          profile: { name: 'Stanislav', targetLevel: 'Middle' },
+          jobs: []
+        },
+        settings: { duration: 120 }
+      });
+
+    expect(response.status).toBe(501);
+    expect(response.body).toMatchObject({
+      ok: false,
+      upgradeRequired: true
+    });
+  });
+
+  it('returns 400 for invalid self-presentation generation payload', async () => {
+    const token = await loginAndGetToken(app);
+    const response = await request(app)
+      .post('/api/self-presentation/generate')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        data: {},
+        settings: { duration: 999 }
+      });
+
+    expect(response.status).toBe(400);
+  });
 });
