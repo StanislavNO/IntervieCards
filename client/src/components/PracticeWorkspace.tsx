@@ -28,6 +28,8 @@ type Props = {
   authLoading: boolean;
   authEnabled: boolean;
   onAuthChange: (user: AuthUser | null) => void;
+  hideWorkspaceHeader?: boolean;
+  showDecorations?: boolean;
 };
 
 function normalizeTag(tag: string): string {
@@ -96,7 +98,9 @@ export function PracticeWorkspace({
   authUser,
   authLoading,
   authEnabled,
-  onAuthChange
+  onAuthChange,
+  hideWorkspaceHeader = false,
+  showDecorations = true
 }: Props) {
   const [cards, setCards] = useState<Card[]>([]);
   const [browseSort, setBrowseSort] = useState<CardSort>('new');
@@ -427,16 +431,19 @@ export function PracticeWorkspace({
 
   return (
     <div className="relative isolate min-h-screen overflow-x-hidden">
-      <div className="pointer-events-none fixed inset-0 z-0 bg-grid" />
-      <div className="pointer-events-none fixed inset-0 z-0 bg-mesh" />
-      <div className="pointer-events-none fixed inset-0 z-0 bg-particles" />
-      {viewMode === 'study' && (
+      {showDecorations && <div className="pointer-events-none fixed inset-0 z-0 bg-grid" />}
+      {showDecorations && <div className="pointer-events-none fixed inset-0 z-0 bg-mesh" />}
+      {showDecorations && <div className="pointer-events-none fixed inset-0 z-0 bg-particles" />}
+      {showDecorations && viewMode === 'study' && (
         <div className="pointer-events-none fixed inset-0 z-[1] bg-white/8 backdrop-blur-[2px] dark:bg-transparent dark:backdrop-blur-0" />
       )}
-      <div className="pointer-events-none fixed inset-x-0 top-[-260px] z-0 h-[520px] bg-[radial-gradient(circle_at_top,_rgba(47,123,255,0.22),_transparent_62%)] dark:bg-[radial-gradient(circle_at_top,_rgba(138,109,255,0.25),_transparent_62%)]" />
+      {showDecorations && (
+        <div className="pointer-events-none fixed inset-x-0 top-[-260px] z-0 h-[520px] bg-[radial-gradient(circle_at_top,_rgba(47,123,255,0.22),_transparent_62%)] dark:bg-[radial-gradient(circle_at_top,_rgba(138,109,255,0.25),_transparent_62%)]" />
+      )}
 
       <div className="relative z-10 mx-auto max-w-7xl px-6 pb-10 pt-6 lg:px-10">
-        <header className="saas-header mb-8">
+        {!hideWorkspaceHeader && (
+          <header className="saas-header mb-8">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
               <button
@@ -539,7 +546,8 @@ export function PracticeWorkspace({
               </button>
             </div>
           )}
-        </header>
+          </header>
+        )}
 
         {authEnabled && !authUser && (
           <div className="mb-5 rounded-xl border border-amber-300 bg-amber-50/80 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
