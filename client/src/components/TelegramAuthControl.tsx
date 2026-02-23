@@ -8,6 +8,13 @@ type Props = {
   loading?: boolean;
   onUserChange: (user: AuthUser | null) => void;
   onProfile?: () => void;
+  menuItems?: Array<{
+    label: string;
+    onSelect: () => void;
+    danger?: boolean;
+    kind?: 'action' | 'logout';
+  }>;
+  hideDefaultMenuItems?: boolean;
   className?: string;
 };
 
@@ -32,7 +39,15 @@ function displayName(user: AuthUser): string {
   return [user.firstName, user.lastName].filter(Boolean).join(' ');
 }
 
-export function TelegramAuthControl({ user, loading = false, onUserChange, onProfile, className }: Props) {
+export function TelegramAuthControl({
+  user,
+  loading = false,
+  onUserChange,
+  onProfile,
+  menuItems,
+  hideDefaultMenuItems = false,
+  className
+}: Props) {
   const widgetContainerRef = useRef<HTMLDivElement | null>(null);
   const callbackNameRef = useRef(`unityprepTelegramAuth_${Math.random().toString(36).slice(2)}`);
   const menuRootRef = useRef<HTMLDivElement | null>(null);
@@ -154,6 +169,16 @@ export function TelegramAuthControl({ user, loading = false, onUserChange, onPro
     handleProfileClick();
   }
 
+  function runCustomAction(action: () => void, kind: 'action' | 'logout' = 'action') {
+    if (kind === 'logout') {
+      void handleLogout();
+      return;
+    }
+
+    setMenuOpen(false);
+    action();
+  }
+
   if (loading) {
     return (
       <div className={`telegram-auth-inline auth-loading-state ${className ?? ''}`}>
@@ -187,12 +212,26 @@ export function TelegramAuthControl({ user, loading = false, onUserChange, onPro
 
           {menuOpen && (
             <div className="auth-menu-panel" role="menu" aria-label="User menu">
-              <button type="button" className="auth-menu-item" onClick={() => runProfileAction(onProfile)}>
-                Профиль
-              </button>
-              <button type="button" className="auth-menu-item auth-menu-item-danger" onClick={handleLogout}>
-                Выйти
-              </button>
+              {menuItems?.map((item) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  className={`auth-menu-item ${item.danger ? 'auth-menu-item-danger' : ''}`}
+                  onClick={() => runCustomAction(item.onSelect, item.kind)}
+                >
+                  {item.label}
+                </button>
+              ))}
+              {!hideDefaultMenuItems && (
+                <>
+                  <button type="button" className="auth-menu-item" onClick={() => runProfileAction(onProfile)}>
+                    Профиль
+                  </button>
+                  <button type="button" className="auth-menu-item auth-menu-item-danger" onClick={handleLogout}>
+                    Выйти
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>
