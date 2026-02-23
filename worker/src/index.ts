@@ -146,6 +146,13 @@ const telegramAuthSchema = z.object({
   hash: z.string().trim().regex(/^[a-f0-9]{64}$/iu)
 });
 
+const selfPresentationGenerateSchema = z.object({
+  data: z.record(z.any()),
+  settings: z.object({
+    duration: z.union([z.literal(60), z.literal(90), z.literal(120)])
+  })
+});
+
 app.use('/api/*', async (c, next) => {
   const allowedOrigins = parseAllowedOrigins(c.env.ALLOWED_ORIGIN);
   return cors({
@@ -201,6 +208,32 @@ app.get('/api/auth/me', async (c) => {
 });
 
 app.post('/api/auth/logout', (c) => c.body(null, 204));
+
+app.post('/api/self-presentation/generate', async (c) => {
+  const unauthorized = await requireAuth(c);
+  if (unauthorized) {
+    return unauthorized;
+  }
+
+  const body = await safeJson(c);
+  if (!body.ok) {
+    return c.json({ error: 'Invalid JSON payload' }, 400);
+  }
+
+  const parsed = selfPresentationGenerateSchema.safeParse(body.value);
+  if (!parsed.success) {
+    return c.json({ error: 'Validation error', details: parsed.error.issues }, 400);
+  }
+
+  return c.json(
+    {
+      ok: false,
+      upgradeRequired: true,
+      message: `AI-генерация пока недоступна. Запрошенная длительность: ${parsed.data.settings.duration} сек.`
+    },
+    501
+  );
+});
 
 app.get('/api/cards', async (c) => {
   const sortQuery = c.req.query('sort');

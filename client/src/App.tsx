@@ -8,6 +8,7 @@ import { AppDashboardPage } from './pages/AppDashboardPage';
 import { AppPlaceholderPage } from './pages/AppPlaceholderPage';
 import { BankPage } from './pages/BankPage';
 import { LandingPage } from './pages/LandingPage';
+import { SelfPresentationPage } from './pages/SelfPresentationPage';
 import { TrainingPage } from './pages/TrainingPage';
 import type { AuthUser } from './types';
 
@@ -140,12 +141,7 @@ function AppShell() {
           />
           <Route
             path="/app/self-presentation"
-            element={
-              <AppPlaceholderPage
-                title="Самопрезентация"
-                description="Здесь будет конструктор самопрезентации с адаптацией под вакансии Unity Developer."
-              />
-            }
+            element={<SelfPresentationPage authUser={authUser} />}
           />
         </Route>
       </Route>

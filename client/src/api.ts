@@ -1,5 +1,6 @@
 import { getStoredAuthToken } from './auth';
 import type { AuthSession, AuthUser, Card, CardPayload, CardSort, ReactionResponse, ReactionValue, TelegramAuthPayload } from './types';
+import type { GenerateSelfPresentationPayload, GenerateSelfPresentationResponse } from './self-presentation/types';
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim().replace(/\/+$/, '') ?? '';
 
@@ -86,4 +87,12 @@ export const authApi = {
     }),
   me: () => request<{ user: AuthUser }>(withBase('/api/auth/me')),
   logout: () => request<void>(withBase('/api/auth/logout'), { method: 'POST' })
+};
+
+export const selfPresentationApi = {
+  generate: (payload: GenerateSelfPresentationPayload) =>
+    request<GenerateSelfPresentationResponse>(withBase('/api/self-presentation/generate'), {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    })
 };
